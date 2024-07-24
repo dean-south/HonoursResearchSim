@@ -1,0 +1,6 @@
+gym
+nptyping
+numpy
+pybullet
+scipy
+yamldataclassconfig

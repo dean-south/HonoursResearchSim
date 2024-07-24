@@ -1,0 +1,21 @@
+urdf_file: /../../models/iRobot/iRobot.urdf
+
+actuators:
+  - type: motor
+    name: motor
+    params:
+      velocity_multiplier: 100 #0.5m/s
+      max_force: 20
+
+sensors:
+  - type: laser
+    name: laser
+    frequency: 100
+    params:
+      inaccuracy: 0.00
+      rays: 30 #number of lasers
+      range: 0.5  #range of the lasers
+      min_range: 0 
+      angle_start: -90 # degree
+      angle: 360 #degree
+      visible: True 

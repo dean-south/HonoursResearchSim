@@ -7,6 +7,9 @@ import gym
 import pybullet as p
 import numpy as np
 import random
+import matplotlib.pyplot as plt
+import pandas as pd
+
 from math import sin, cos, pi
 
 from iRobot_gym.envs import SimpleNavEnv
@@ -67,7 +70,7 @@ class SimEnv():
             self._controller = NoveltyController(
                 self._env, args.file_name, verbose=self._verbose)
         elif self._ctr == "RL":
-            self._controller = Agent(alpha=0.01, beta=0.01, input_dims=18, tau=0.05, env=self._env, 
+            self._controller = Agent(alpha=0.0001, beta=0.0001, input_dims=18, tau=0.001, env=self._env, 
                                      batch_size=100, layer1_size=400, layer2_size=300, n_actions=2,
                                      model_name=args.model_name)                
             
@@ -105,6 +108,14 @@ class SimEnv():
                 if self._controller.get_next_command() == -1 or self._controller.wrong_cell:
                     self._controller.wrong_cell = False
                     done = True
+
+                laserRanges = self._env.get_laserranges()
+                for r in laserRanges:
+                    if r < 0.2 and r > 0.1:                           
+                        done = True
+                        if self._verbose:
+                            print("collision detected")
+                        self._rew = min(-1000, -self._rew)
 
             time.sleep(self._sleep_time)
 
@@ -185,6 +196,7 @@ class SimEnv():
 
         best_score = -1000000
         score_history = []
+        avg_score_history = []
 
         kill_sim = False
 
@@ -218,15 +230,6 @@ class SimEnv():
 
                     self._controller.current_cell = self.pose_to_cell(state_command_[:2])
 
-                    # laserRanges = self._env.get_laserranges()
-                    # for r in laserRanges:
-                    #     if r < 0.2 and r > 0.1:                           
-                    #         p.resetBasePositionAndOrientation(3, [-7.5,-7.5, 0.0], [0, 0, 1, 1])
-                    #         self._done = 1
-                    #         if self._verbose:
-                    #             print("collision detected")
-                    #         self._rew = -2000
-
                     if not self.test_mode:
                         self._controller.remember(self._controller.state_command, action, self._rew, state_command_, self._done)
                         self._controller.learn()
@@ -251,11 +254,17 @@ class SimEnv():
             
             score_history.append(score)
             avg_score = np.mean(score_history[-100:])
+            avg_score_history.append(avg_score)
+
+            self.save_scores(score_history, avg_score_history)
+            self.create_graph()
 
             if avg_score > best_score:
                 best_score = avg_score
                 if not self.test_mode:
                     self._controller.save_models(e)
+            elif e % 150 == 0 and not self.test_mode:
+                self._controller.save_models(e)
 
 
             print(f"episode {e}, score {score}, average score {avg_score}")
@@ -267,17 +276,51 @@ class SimEnv():
         print("Simulation time:", self._info['time'], "s\n")
         self._env.close()
 
-    def save_score(self, scores):
+    def save_scores(self, scores, avg_scores):
         cwd = os.getcwd()
         data_path = os.path.join(cwd, 'Data')
 
-        with open(data_path + f'/{self._model_name}') as file:
+        episodes = len(scores)
+
+        data = [[e, scores[e], avg_scores[e]] for e in range(episodes)]
+
+        with open(data_path + f'/{self._model_name}.csv', 'w') as file:
             writer = csv.writer(file)
-            writer.writerow(scores)
+            writer.writerow(["episodes", "scores", 'avg_scores'])
+            writer.writerows(data)
 
 
     def create_graph(self):
-        pass
+        cwd = os.getcwd()
+        data_path = os.path.join(cwd, 'Data')
+        graph_path = os.path.join(cwd, 'Graphs')
+
+        data = pd.read_csv(data_path + f'/{self._model_name}.csv')
+
+        # Extract the y-values
+        y_scores = data['scores'].values
+        y_avg_scores = data['avg_scores'].values
+
+        # Generate x-values
+        x = data['episodes'].values
+
+        # Create a line graph
+        plt.plot(x, y_scores, label='Episode Score')
+        plt.plot(x, y_avg_scores, label='Rolling Average Score')
+
+        # Add title and labels
+        plt.title(f'{self._model_name} Score Graph')
+        plt.xlabel('Episode')
+        plt.ylabel('Score')
+
+        plt.legend()
+
+        # Save the graph to a file
+        plt.savefig(f'{graph_path}/{self._model_name}.png')
+
+        # Close the plot to free up memory
+        plt.close()
+        
 
     def save_result(self):
         """Save the simulation data in a csv file in the folder

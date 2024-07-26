@@ -1,7 +1,7 @@
 world:
   name: blank
   sdf: blank.urdf
-  scale: 10
+  scale: 8.07
   physics:
     gravity: -9.81
   simulation:
@@ -9,7 +9,7 @@ world:
     GUI: True
     following_camera : False
   goal:
-    goal_position: [100,5,0]
+    goal_position: [0,0,0]
     goal_size : 0.2
   
 agents:
@@ -21,5 +21,5 @@ agents:
     task_name: reward_rapprochement_goal
     params: { time_limit: -1, goal_size_detection: 0.}
   starting_position: [-7.5,-7.5, 0.0]
-  starting_orientation: [ 0.0, 0.0, 0]
+  starting_orientation: [ 0.0, 0.0, 1.571]
  

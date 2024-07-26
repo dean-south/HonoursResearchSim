@@ -17,5 +17,5 @@ sensors:
       range: 0.5  #range of the lasers
       min_range: 0 
       angle_start: -90 # degree
-      angle: 360 #degree
+      angle: 180 #degree
       visible: True 

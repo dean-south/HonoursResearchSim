@@ -133,8 +133,13 @@ class Agent():
         self.warmup = warmup
         self.n_actions = n_actions
         self.update_actor_iter = update_actor_interval
-        self.pose = [0,0,0]
+        self.state_command = []
         self.model_name = model_name
+        self.commands = []
+        self.current_cell = [0,0]
+        self.train_info = [] #expected cell, goal cell, goal pose
+        self.cell_path = []
+        self.wrong_cell = 0
 
         self.actor = ActorNetwork(alpha, input_dims, layer1_size, layer2_size, self.n_actions, name='actor')
 
@@ -148,14 +153,12 @@ class Agent():
         self.noise = noise
         self.update_network_parameters(tau=1)
 
-    def get_action(self, state_command):   
-
-        self.pose = state_command[:3]
+    def get_action(self):   
 
         if self.time_step < self.warmup:
             mu = T.tensor(np.random.normal(scale=self.noise, size=(self.n_actions,))).to(self.actor.device)
         else:
-            state = T.tensor(state_command, dtype=T.float).to(self.actor.device)
+            state = T.tensor(self.state_command, dtype=T.float).to(self.actor.device)
             mu = self.actor.forward(state).to(self.actor.device)
 
         mu_prime = mu + T.tensor(np.random.normal(scale=self.noise), dtype=T.float).to(self.actor.device)
@@ -259,45 +262,43 @@ class Agent():
         self.actor.load_state_dict(actor)
 
     
-    def get_reward(self, cell_time, sim_time, com_cntr, command_list,  path, current_cell, state ):
+    def get_reward(self, ):
+        reward = 0
+        
+        if self.get_command() == 0:
+            reward = 500\
+            if abs(self.state_command[3]) + abs(self.state_command[4]) + abs(self.state_command)[5] == 0 else \
+            - (abs(self.state_command[3]) + abs(self.state_command[4]) + abs(self.state_command[5]))
+            
 
-        unit_v = np.array(path[com_cntr+1]) - np.array(path[com_cntr])
+        if self.current_cell != self.cell_path[0] and self.current_cell != self.cell_path[1]:
+            self.wrong_cell = True
+            return min(-1000, -reward)
 
-        i_direction = acos(unit_v[0])+asin(unit_v[1])
+        return reward
 
-
-        if command_list[com_cntr] == 1 and current_cell == path[com_cntr+1]:
-            com_cntr += 1
-            return 10000/(sim_time - cell_time), com_cntr   
-        elif command_list[com_cntr] == 1 and np.dot(state['velocity'][:2], abs(unit_v)) * (unit_v[0] + unit_v[1]) > 0:
-
-                reward = 1
-
-                if state['pose'][-1] < i_direction + pi/16 and state['pose'][-1] > i_direction - pi/8:
-                    reward *= 2
-
-                if command_list[com_cntr + 1] == 1:
-                    reward *= np.dot(state['velocity'][:2], abs(unit_v))
-
-                return reward, com_cntr
-        elif command_list[com_cntr] == 1 and np.dot(state['velocity'][:2], abs(unit_v)) * (unit_v[0] + unit_v[1]) < 0:
-                return -1, com_cntr
-        elif command_list[com_cntr] == 0:
-            abs_v = (abs(state['velocity'][0]) + abs(state['velocity'][1]) + abs(state['velocity'][-1]))
-            if abs_v < 0.01:
-                com_cntr += 1
-                return 10000/(sim_time - cell_time), com_cntr  
-            else: 
-                return 1/abs_v, com_cntr
-        elif current_cell != path[com_cntr]:
-            return -10, com_cntr
-        else:                
-            return 0, com_cntr
+    def is_command_complete(self):
+        if self.get_command == 0 and abs(self.state_command[3]) + abs(self.state_command[4]) + abs(self.state_command[5]) < 0.001:
+            self.commands.pop(0)
+            return True
+        else:
+            False
 
 
     def reset(self):
         pass
 
+    def get_command(self):
+        return self.commands[0]
+
+    def get_next_command(self):
+        if len(self.commands) > 1:
+            return self.commands[1]
+        else:
+            return -1
+        
+    def set_state_command(self, state_command):
+        self.state_command = state_command
 
     def save_models(self, episode):
 

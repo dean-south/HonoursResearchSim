@@ -6,6 +6,7 @@ import argparse
 import gym
 import pybullet as p
 import numpy as np
+import random
 from math import sin, cos, pi
 
 from iRobot_gym.envs import SimpleNavEnv
@@ -41,11 +42,13 @@ class SimEnv():
         self._verbose = args.verbose
         self._episodes = args.episodes
         self._model_name = args.model_name
-        self._i = 0
-        self._liste_position = []
+        self._i = -1
+        self._list_position = []
         self._env.reset()
-        self._obs, self._rew, self._done, self._info = self._env.step([0, 0])
         self.train = args.train
+        self.test_mode = args.test_mode
+        
+
 
         # initialize controllers
         if self._ctr == "forward":
@@ -64,16 +67,18 @@ class SimEnv():
             self._controller = NoveltyController(
                 self._env, args.file_name, verbose=self._verbose)
         elif self._ctr == "RL":
-            self._controller = Agent(alpha=0.01, beta=0.01, input_dims=17, tau=0.05, env=self._env, 
-                                     batch_size=100, layer1_size=400, layer2_size=300, n_actions=2, model_name=args.model_name)
+            self._controller = Agent(alpha=0.01, beta=0.01, input_dims=18, tau=0.05, env=self._env, 
+                                     batch_size=100, layer1_size=400, layer2_size=300, n_actions=2,
+                                     model_name=args.model_name)                
             
-            if not args.test_mode:
+            if not self.test_mode:
 
                 if args.load_model != '':
                     self._controller.load_models(args.load_model, args.model_version)
 
                 path = os.path.join(os.getcwd() + '/saved_models', args.model_name)
                 os.mkdir(path)
+
 
         elif self._ctr == "blank":
             self._controller = BlankController()
@@ -84,18 +89,22 @@ class SimEnv():
     def _movement(self, action, nbr=1):
         for _ in range(nbr):
             obs, rew, done, info = self._env.step(action)
-            # print("Value of obs :" + str(obs))
-            # print("Value of rew :" + str(rew))
-            # print("Value of done :" + str(done))
-            # print("Value of info :" + str(info))
+
             print(self._i, end='\r')
             self._i += 1
-            if args.save_res:
-                x, y, z, roll, pitch, yaw = info['pose']
-                self._liste_position.append(
-                    [self._i, x, y, z, roll, pitch, yaw, info["dist_obj"], obs])
-            if done:
-                break
+
+            if self._i > 0:
+                rew = self._controller.get_reward()
+
+                self._controller.is_command_complete()
+
+                obs = self.get_state_command(info, self._controller.get_command(), 
+                                         self._controller.get_next_command())
+            
+            
+                if self._controller.get_next_command() == -1 or self._controller.wrong_cell:
+                    self._controller.wrong_cell = False
+                    done = True
 
             time.sleep(self._sleep_time)
 
@@ -107,24 +116,26 @@ class SimEnv():
         state_command[:2] = state['pose'][:2] # position x,y
         state_command[2] = state['pose'][-1] # orientation
         state_command[3:5] = state['velocity'][:2] # velocity x,y
+        state_command[5] = state['velocity'][-1] #angular velocity
 
         com = np.zeros(6)
         next_com = np.zeros(6)
 
         com[command] = 1
-        next_com[next_command] = 1
+        if next_command != -1:
+            next_com[next_command] = 1
 
-        state_command[5:11] = com
-        state_command[11:] = next_com
+        state_command[6:12] = com
+        state_command[12:18] = next_com
 
         return state_command
     
-    def get_cell_path(self):
-        cell_path = [[0,0]]
+    def get_cell_path(self, start_cell):
+        cell_path = [start_cell]
 
         orientation = 0
 
-        for c in self.commands:
+        for c in self._controller.commands:
             if c == 0:
                 cell_path.append(cell_path[-1])
             elif c == 1:
@@ -137,8 +148,8 @@ class SimEnv():
         return cell_path
 
 
-    def pose_to_cell(self, state):
-        x,y = state['pose'][:2]
+    def pose_to_cell(self, pos):
+        x,y = pos
 
         cell_x = 0
         cell_y = 0
@@ -152,68 +163,81 @@ class SimEnv():
 
         return [cell_x, cell_y]
 
-    
+    def random_start_pose(self):
+
+        cell_x = random.randint(0,15)
+        cell_y = random.randint(0,15)
+
+        start_pos = [i for i in range(-8,8,1)]
+        directions = [[0,0,1,1], [0,0,0,1], [0,0,-1,1], [0,0,0,-1]]
+
+        start_x = start_pos[cell_x] + random.uniform(0.168, 0.832)
+        start_y = start_pos[cell_y] + random.uniform(0.168, 0.832)
+
+        d = random.randint(0,3)
+        orientation = directions[d]
+
+        return [start_x, start_y, 0], orientation
+
 
     def start(self):
         """Forward the simulation until its complete."""  
 
-        best_score = 0
+        best_score = -1000000
         score_history = []
 
         kill_sim = False
 
-
         for e in range(self._episodes):
-
-            self._done = 0
-            com_cntr = 0
-            cell_time = 0
-            curr_cell = [0,0]
-            score = 0
-            self._i = 0
-            self._env.reset()
-
             print(f"Starting Epoch {e}")
 
-            while not self._done and not com_cntr == len(self.get_cell_path()):
+            self._done = 0
+            score = 0
+            self._i = -1
+            self._env.reset()
+
+            if self.train == 'stay':
+                self._controller.commands = [0,0]
+                start_pos, start_ori = self.random_start_pose()
+                p.resetBasePositionAndOrientation(3, start_pos, start_ori)
+
+            self._obs, self._rew, self._done, self._info = self._movement([0, 0])
+
+            self._controller.current_cell = self.pose_to_cell(start_pos[:2])
+            self._controller.cell_path = self.get_cell_path(self._controller.current_cell)
+
+            self._controller.set_state_command(self.get_state_command(self._info, self._controller.get_command(),
+                                                                      self._controller.get_next_command()))
+
+
+            while not self._done:
 
                 try:
+                    action = self._controller.get_action()
+                    state_command_, self._rew, self._done, self._info = self._movement(action)
 
-                    action = self._controller.get_action(state_command)
-                    self._obs, self._rew, self._done, self._info = self._movement(action)
+                    self._controller.current_cell = self.pose_to_cell(state_command_[:2])
 
-                    curr_cell = self.pose_to_cell(self._info)
+                    # laserRanges = self._env.get_laserranges()
+                    # for r in laserRanges:
+                    #     if r < 0.2 and r > 0.1:                           
+                    #         p.resetBasePositionAndOrientation(3, [-7.5,-7.5, 0.0], [0, 0, 1, 1])
+                    #         self._done = 1
+                    #         if self._verbose:
+                    #             print("collision detected")
+                    #         self._rew = -2000
 
-                    prev_com_cntr = com_cntr
-                    self._rew, com_cntr = self._controller.get_reward(cell_time, self._i, com_cntr, self.commands, self.cell_path, curr_cell, self._info)
+                    if not self.test_mode:
+                        self._controller.remember(self._controller.state_command, action, self._rew, state_command_, self._done)
+                        self._controller.learn()
 
-                    if prev_com_cntr < com_cntr:
-                        cell_time = self._i
-
-                    laserRanges = self._env.get_laserranges()
-                    for r in laserRanges:
-                        if r < 0.2 and r > 0.1:                           
-                            p.resetBasePositionAndOrientation(3, [-7.5,-7.5, 0.0], [0, 0, 1, 1])
-                            self._done = 1
-                            if self._verbose:
-                                print("collision detected")
-                            self._rew = -2000
-
-                    if curr_cell != self.cell_path[com_cntr]:
-                        self._done = 1
-
-                    state_command_ = self.get_state_command(self._info, self.commands[com_cntr], self.commands[com_cntr + 1])
-                    self._obs = state_command
-
-                    self._controller.remember(state_command, action, self._rew, state_command_, self._done)
-                    self._controller.learn()
                     score += self._rew
-                    state_command = state_command_
- 
+                    self._controller.set_state_command(state_command_)
+
                     # print(self._info['pose'])
                     self._controller.reset()
 
-                    if self._i == 5000:
+                    if self._i == 1500:
                         self._done = 1
                         break
 
@@ -226,16 +250,18 @@ class SimEnv():
                 break
             
             score_history.append(score)
-            avg_score = np.mean(score_history)
+            avg_score = np.mean(score_history[-100:])
 
             if avg_score > best_score:
                 best_score = avg_score
+                if not self.test_mode:
+                    self._controller.save_models(e)
+
 
             print(f"episode {e}, score {score}, average score {avg_score}")
-            p.resetBasePositionAndOrientation(3, [-9.3, -9.25, 0.0], [0, 0, 1, 1])
+            # p.resetBasePositionAndOrientation(3, [-9.3, -9.25, 0.0], [0, 0, 1, 1])
 
-            self._controller.save_models(e)
-
+            
         print("training is completed")
         print("Number of steps:", self._i)
         print("Simulation time:", self._info['time'], "s\n")
@@ -291,7 +317,7 @@ if __name__ == "__main__":
                         help="set true or false for test mode")
     parser.add_argument('--load_model', type=str, default='',
                         help="give name of pre-trained model to load")
-    parser.add_argument('--model_version', type=str, default='',
+    parser.add_argument('--model_version', type=int, default=0,
                         help="if load_model isn't blank, state which version of the model you want to load")
     parser.add_argument('--train', type=str, default='stay',
                         help='state what you want the model to train')

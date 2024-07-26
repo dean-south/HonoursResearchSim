@@ -43,7 +43,7 @@ class SimEnv():
         self._episodes = args.episodes
         self._model_name = args.model_name
         self._i = -1
-        self._list_position = []
+        self._liste_position = []
         self._env.reset()
         self.train = args.train
         self.test_mode = args.test_mode
@@ -266,6 +266,18 @@ class SimEnv():
         print("Number of steps:", self._i)
         print("Simulation time:", self._info['time'], "s\n")
         self._env.close()
+
+    def save_score(self, scores):
+        cwd = os.getcwd()
+        data_path = os.path.join(cwd, 'Data')
+
+        with open(data_path + f'/{self._model_name}') as file:
+            writer = csv.writer(file)
+            writer.writerow(scores)
+
+
+    def create_graph(self):
+        pass
 
     def save_result(self):
         """Save the simulation data in a csv file in the folder

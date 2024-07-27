@@ -4,6 +4,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 import torch.nn as nn
 import os
+import random
 from math import acos, asin, pi
 
 
@@ -133,13 +134,13 @@ class Agent():
         self.warmup = warmup
         self.n_actions = n_actions
         self.update_actor_iter = update_actor_interval
-        self.state_command = []
         self.model_name = model_name
-        self.commands = []
-        self.current_cell = [0,0]
-        self.train_info = [] #expected cell, goal cell, goal pose
         self.cell_path = []
         self.wrong_cell = 0
+        self.current_cell = []
+        self.desired_cell = []
+        self.prev_cell = []
+        self.state = []
 
         self.actor = ActorNetwork(alpha, input_dims, layer1_size, layer2_size, self.n_actions, name='actor')
 
@@ -158,8 +159,14 @@ class Agent():
         if self.time_step < self.warmup:
             mu = T.tensor(np.random.normal(scale=self.noise, size=(self.n_actions,))).to(self.actor.device)
         else:
-            state = T.tensor(self.state_command, dtype=T.float).to(self.actor.device)
+            state = T.tensor(self.state, dtype=T.float).to(self.actor.device)
             mu = self.actor.forward(state).to(self.actor.device)
+
+            if self.current_cell == self.desired_cell:
+                r = random.random()
+
+                if r < 0.1:
+                    return np.array([0,0])
 
         mu_prime = mu + T.tensor(np.random.normal(scale=self.noise), dtype=T.float).to(self.actor.device)
 
@@ -261,44 +268,42 @@ class Agent():
         self.target_critic_2.load_state_dict(critic_2)
         self.actor.load_state_dict(actor)
 
-    
-    def get_reward(self, ):
-        reward = 0
-        
-        if self.get_command() == 0:
-            reward = 500\
-            if abs(self.state_command[3]) + abs(self.state_command[4]) + abs(self.state_command)[5] == 0 else \
-            - (abs(self.state_command[3]) + abs(self.state_command[4]) + abs(self.state_command[5]))
-            
+    def desired_orientation(self):
+        unit_v = (np.array(self.desired_cell) - np.array(self.current_cell))/np.linalg.norm([self.desired_cell, self.current_cell])
 
-        if self.current_cell != self.cell_path[0] and self.current_cell != self.cell_path[1]:
+        return acos(unit_v[0]) + asin(unit_v[1])
+    
+    def get_reward(self):
+        reward = 0
+
+        # print(self.prev_cell, self.current_cell, self.desired_cell)
+
+        if self.current_cell == self.desired_cell:
+
+            if abs(self.state[0]) + abs(self.state[1]) + abs(self.state[2]) == 0:
+                return 1000
+            elif abs(self.state[0]) + abs(self.state[1]) + abs(self.state[2]) < 0.5:
+                return min(750, 0.001/abs(self.state[0]) + abs(self.state[1]) + abs(self.state[2]))
+            
+            reward = - (abs(self.state[0]) + abs(self.state[1]) + abs(self.state[2]))
+            
+        elif self.prev_cell != self.current_cell \
+            and np.linalg.norm([self.prev_cell,self.desired_cell]) > np.linalg.norm([self.current_cell, self.desired_cell]):
+            reward = 100
+        elif self.prev_cell != self.current_cell \
+            and np.linalg.norm([self.prev_cell,self.desired_cell]) < np.linalg.norm([self.current_cell, self.desired_cell]):
             self.wrong_cell = True
-            return min(-1000, -reward)
+            reward = -200
+        elif self.desired_orientation() - pi/8 > self.state[2] and self.desired_orientation() + pi/8 < self.state[2]:
+            reward = 1
+        else:        
+            reward = -1
 
         return reward
-
-    def is_command_complete(self):
-        if self.get_command == 0 and abs(self.state_command[3]) + abs(self.state_command[4]) + abs(self.state_command[5]) < 0.001:
-            self.commands.pop(0)
-            return True
-        else:
-            False
 
 
     def reset(self):
         pass
-
-    def get_command(self):
-        return self.commands[0]
-
-    def get_next_command(self):
-        if len(self.commands) > 1:
-            return self.commands[1]
-        else:
-            return -1
-        
-    def set_state_command(self, state_command):
-        self.state_command = state_command
 
     def save_models(self, episode):
 
@@ -335,19 +340,4 @@ class Agent():
         self.critic_2.load_checkpoint(load_dir_path)
         self.target_critic_2.load_checkpoint(load_dir_path)
 
-
-class RLController:
-
-    def __init__(self, env, verbose=False):
-        self._env = env
-        self._verbose = verbose
-
-        self.agent = Agent(alpha=0.001, beta=0.001, input_dims=[17,1], tau=0.005, env=self._env, 
-                      batch_size=100, layer1_size=400, layer2_size=300, n_actions=2)
-
-    def get_action(self, command, next_command, state):
-        pass
-    
-    def reset(self):
-        pass
 

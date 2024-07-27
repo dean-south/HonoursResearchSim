@@ -54,23 +54,8 @@ class SimEnv():
 
 
         # initialize controllers
-        if self._ctr == "forward":
-            self._controller = ForwardController(
-                self._env, verbose=self._verbose)
-        elif self._ctr == "wall":
-            self._controller = FollowWallController(
-                self._env, verbose=self._verbose)
-        elif self._ctr == "rule":
-            self._controller = RuleBasedController(
-                self._env, verbose=self._verbose)
-        elif self._ctr == "braitenberg":
-            self._controller = BraitenbergController(
-                self._env, verbose=self._verbose)
-        elif self._ctr == "novelty":
-            self._controller = NoveltyController(
-                self._env, args.file_name, verbose=self._verbose)
-        elif self._ctr == "RL":
-            self._controller = Agent(alpha=0.0001, beta=0.0001, input_dims=18, tau=0.001, env=self._env, 
+        if self._ctr == "RL":
+            self._controller = Agent(alpha=0.001, beta=0.001, input_dims=10, tau=0.001, env=self._env, 
                                      batch_size=100, layer1_size=400, layer2_size=300, n_actions=2,
                                      model_name=args.model_name)                
             
@@ -81,10 +66,6 @@ class SimEnv():
 
                 path = os.path.join(os.getcwd() + '/saved_models', args.model_name)
                 os.mkdir(path)
-
-
-        elif self._ctr == "blank":
-            self._controller = BlankController()
         else:
             print("\nNo controller named", self._ctr)
             sys.exit()
@@ -97,17 +78,29 @@ class SimEnv():
             self._i += 1
 
             if self._i > 0:
-                rew = self._controller.get_reward()
 
-                self._controller.is_command_complete()
+                self._controller.current_cell = self.pose_to_cell(self._info['pose'][:2])
 
-                obs = self.get_state_command(info, self._controller.get_command(), 
-                                         self._controller.get_next_command())
+                rew = self._controller.get_reward()            
             
-            
-                if self._controller.get_next_command() == -1 or self._controller.wrong_cell:
+                # if self._controller.get_next_command() == -1 or self._controller.wrong_cell:
+                #     self._controller.wrong_cell = False
+                #     done = True
+
+                obs = [*self._info['pose'][:2],
+                       self._info['pose'][-1],
+                       *self._info['velocity'][:2],
+                       self._info['velocity'][-1],
+                       *self._controller.current_cell,
+                       *self._controller.desired_cell]
+                
+                if self._controller.current_cell == self._controller.desired_cell \
+                    and abs(obs[0]) + abs(obs[1]) + abs(obs[2]) == 0:
+                    done = 1
+                elif self._controller.wrong_cell:
                     self._controller.wrong_cell = False
-                    done = True
+                    done = 1
+
 
                 laserRanges = self._env.get_laserranges()
                 for r in laserRanges:
@@ -121,42 +114,22 @@ class SimEnv():
 
         return obs, rew, done, info
     
-    def get_state_command(self, state, command, next_command):
-        state_command = np.zeros(self._controller.actor.input_dims)
+    # def get_cell_path(self, start_cell):
+    #     cell_path = [start_cell]
 
-        state_command[:2] = state['pose'][:2] # position x,y
-        state_command[2] = state['pose'][-1] # orientation
-        state_command[3:5] = state['velocity'][:2] # velocity x,y
-        state_command[5] = state['velocity'][-1] #angular velocity
+    #     orientation = 0
 
-        com = np.zeros(6)
-        next_com = np.zeros(6)
+    #     for c in self.commands:
+    #         if c == 0:
+    #             cell_path.append(cell_path[-1])
+    #         elif c == 1:
+    #             cell_path.append([cell_path[-1][0] + sin(pi/2*orientation), cell_path[-1][1] + cos(pi/2*orientation)])
+    #         elif c == 2:
+    #             orientation = (orientation + 3) % 4
+    #         elif c == 3:
+    #             orientation = (orientation + 1) % 4
 
-        com[command] = 1
-        if next_command != -1:
-            next_com[next_command] = 1
-
-        state_command[6:12] = com
-        state_command[12:18] = next_com
-
-        return state_command
-    
-    def get_cell_path(self, start_cell):
-        cell_path = [start_cell]
-
-        orientation = 0
-
-        for c in self._controller.commands:
-            if c == 0:
-                cell_path.append(cell_path[-1])
-            elif c == 1:
-                cell_path.append([cell_path[-1][0] + sin(pi/2*orientation), cell_path[-1][1] + cos(pi/2*orientation)])
-            elif c == 2:
-                orientation = (orientation + 3) % 4
-            elif c == 3:
-                orientation = (orientation + 1) % 4
-
-        return cell_path
+        # return cell_path
 
 
     def pose_to_cell(self, pos):
@@ -173,6 +146,33 @@ class SimEnv():
                 cell_y = i
 
         return [cell_x, cell_y]
+    
+    def get_cell_path(self):
+        
+        cell_path = [self._controller.current_cell]
+        curr_cell = self._controller.current_cell
+
+        direction = random.randint(0,3)
+
+        d_x = int(sin(direction * pi/2))
+        d_y = int(cos(direction * pi/2))
+
+        dist = random.randint(0,15)
+
+        des_cell = [int(curr_cell[0] + d_x*dist), int(curr_cell[1] + d_y*dist)]
+
+        if des_cell[0] < 0:
+            des_cell[0] = 0
+        elif des_cell[1] < 0:
+            des_cell[1] = 0
+        elif des_cell[0] > 15:
+            des_cell[0] = 15
+        elif des_cell[1] > 15:
+            des_cell[1] = 15
+
+        cell_path.append(des_cell)
+
+        return cell_path
 
     def random_start_pose(self):
 
@@ -208,39 +208,45 @@ class SimEnv():
             self._i = -1
             self._env.reset()
 
-            if self.train == 'stay':
-                self._controller.commands = [0,0]
+            if self.train == 'nav':
                 start_pos, start_ori = self.random_start_pose()
                 p.resetBasePositionAndOrientation(3, start_pos, start_ori)
 
             self._obs, self._rew, self._done, self._info = self._movement([0, 0])
 
             self._controller.current_cell = self.pose_to_cell(start_pos[:2])
-            self._controller.cell_path = self.get_cell_path(self._controller.current_cell)
+            self._controller.cell_path = self.get_cell_path()
+            self._controller.desired_cell = self._controller.cell_path[1]
 
-            self._controller.set_state_command(self.get_state_command(self._info, self._controller.get_command(),
-                                                                      self._controller.get_next_command()))
+            print(f'starting cell {self._controller.cell_path[0]}, desired cell {self._controller.cell_path[1]}')
 
+            self._controller.state = [*self._info['pose'][:2],
+                                      self._info['pose'][-1],
+                                      *self._info['velocity'][:2],
+                                      self._info['velocity'][-1],
+                                      *self._controller.current_cell,
+                                      *self._controller.desired_cell]
 
             while not self._done:
 
                 try:
-                    action = self._controller.get_action()
-                    state_command_, self._rew, self._done, self._info = self._movement(action)
+                    self._controller.prev_cell = self._controller.current_cell
 
-                    self._controller.current_cell = self.pose_to_cell(state_command_[:2])
+                    action = self._controller.get_action()
+                    state_, self._rew, self._done, self._info = self._movement(action)
+                    
 
                     if not self.test_mode:
-                        self._controller.remember(self._controller.state_command, action, self._rew, state_command_, self._done)
+                        self._controller.remember(self._controller.state, action, self._rew, state_, self._done)
                         self._controller.learn()
 
                     score += self._rew
-                    self._controller.set_state_command(state_command_)
+                    self._controller.state = state_
 
                     # print(self._info['pose'])
                     self._controller.reset()
 
-                    if self._i == 1500:
+                    if self._i == 3500:
                         self._done = 1
                         break
 
@@ -374,7 +380,7 @@ if __name__ == "__main__":
                         help="give name of pre-trained model to load")
     parser.add_argument('--model_version', type=int, default=0,
                         help="if load_model isn't blank, state which version of the model you want to load")
-    parser.add_argument('--train', type=str, default='stay',
+    parser.add_argument('--train', type=str, default='nav',
                         help='state what you want the model to train')
     args = parser.parse_args()
     main()

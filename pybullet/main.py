@@ -56,7 +56,7 @@ class SimEnv():
         # initialize controllers
         if self._ctr == "RL":
             self._controller = Agent(alpha=0.001, beta=0.001, input_dims=10, tau=0.001, env=self._env, 
-                                     batch_size=100, layer1_size=400, layer2_size=300, n_actions=2,
+                                     batch_size=100, layer1_size=128, layer2_size=128, n_actions=2,
                                      model_name=args.model_name)                
             
             if not self.test_mode:

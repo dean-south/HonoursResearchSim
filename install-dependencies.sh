@@ -11,7 +11,6 @@ set -o nounset
 set -o pipefail
 
 
-
 BASE_DIR="${PWD}"
 
 # Create dir
@@ -118,6 +117,6 @@ else
     git pull https://github.com/benelot/pybullet-gym.git
 fi
 
-pip install -e .
+pip3 install -e .
 
 

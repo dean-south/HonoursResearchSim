@@ -59,7 +59,7 @@ class CriticNetwork(nn.Module):
         self.q1 = nn.Linear(self.fc2_dims, 1)
 
         self.optimiser = optim.Adam(self.parameters(), lr=beta)
-        self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
+        self.device = T.device('cuda:0')
 
         self.to(self.device)
 
@@ -95,15 +95,15 @@ class ActorNetwork(nn.Module):
         self.mu = nn.Linear(self.fc2_dims, self.n_actions)
 
         self.optimiser = optim.Adam(self.parameters(), lr=alpha)
-        self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
+        self.device = T.device('cuda:0')
 
         self.to(self.device)
 
     def forward(self, state):
         prob = self.fc1(state)
-        prob = F.relu(prob)
+        prob = F.sigmoid(prob)
         prob = self.fc2(prob)
-        prob = F.relu(prob)
+        prob = F.sigmoid(prob)
 
         mu = T.tanh(self.mu(prob))
 
@@ -139,8 +139,8 @@ class Agent():
         self.wrong_cell = 0
         self.current_cell = []
         self.desired_cell = []
-        self.prev_cell = []
         self.state = []
+        self.prev_state = []
 
         self.actor = ActorNetwork(alpha, input_dims, layer1_size, layer2_size, self.n_actions, name='actor')
 
@@ -161,12 +161,6 @@ class Agent():
         else:
             state = T.tensor(self.state, dtype=T.float).to(self.actor.device)
             mu = self.actor.forward(state).to(self.actor.device)
-
-            if self.current_cell == self.desired_cell:
-                r = random.random()
-
-                if r < 0.1:
-                    return np.array([0,0])
 
         mu_prime = mu + T.tensor(np.random.normal(scale=self.noise), dtype=T.float).to(self.actor.device)
 
@@ -268,36 +262,56 @@ class Agent():
         self.target_critic_2.load_state_dict(critic_2)
         self.actor.load_state_dict(actor)
 
-    def desired_orientation(self):
-        unit_v = (np.array(self.desired_cell) - np.array(self.current_cell))/np.linalg.norm([self.desired_cell, self.current_cell])
+    # def desired_orientation(self):
+    #     unit_v = (np.array(self.desired_cell) - np.array(self.current_cell))/np.linalg.norm([self.desired_cell, self.current_cell])
 
-        return acos(unit_v[0]) + asin(unit_v[1])
+        # return acos(unit_v[0]) + asin(unit_v[1])
     
     def get_reward(self):
+        return self.nav_cell_reward()
+
+
+    def nav_cell_reward(self):
+        reward = 0
+
+        x,y = self.state[:2]
+        prev_x, prev_y = self.prev_state[:2]
+
+        current_cell = self.pos2cell(x,y)
+        prev_cell = self.pos2cell(prev_x, prev_y)
+
+        if current_cell == self.get_desired_cell():
+            reward += 200
+            self.cell_path.pop(0)
+        elif prev_cell != current_cell and \
+            np.linalg.norm([prev_cell, self.get_desired_cell()]) > np.linalg.norm([current_cell, self.get_desired_cell()]):
+            reward += 10
+        elif prev_cell != current_cell and \
+            np.linalg.norm([prev_cell, self.get_desired_cell()]) < np.linalg.norm([current_cell, self.get_desired_cell()]):
+            reward += -100
+            self.wrong_cell = True
+        else:
+            reward -= 1
+
+        return reward
+
+    
+
+    def stay_reward(self):
         reward = 0
 
         # print(self.prev_cell, self.current_cell, self.desired_cell)
 
         if self.current_cell == self.desired_cell:
 
-            if abs(self.state[0]) + abs(self.state[1]) + abs(self.state[2]) == 0:
-                return 1000
-            elif abs(self.state[0]) + abs(self.state[1]) + abs(self.state[2]) < 0.5:
-                return min(750, 0.001/abs(self.state[0]) + abs(self.state[1]) + abs(self.state[2]))
+            if np.linalg.norm([self.state[3], self.state[4], self.state[5]]) == 0:
+                reward = 100
+            elif np.linalg.norm([self.state[3], self.state[4], self.state[5]]) \
+                  - np.linalg.norm([self.prev_state[3], self.prev_state[4], self.prev_state[5]]) < 0:
+                reward = 1
+            else: 
+                reward = -1
             
-            reward = - (abs(self.state[0]) + abs(self.state[1]) + abs(self.state[2]))
-            
-        elif self.prev_cell != self.current_cell \
-            and np.linalg.norm([self.prev_cell,self.desired_cell]) > np.linalg.norm([self.current_cell, self.desired_cell]):
-            reward = 100
-        elif self.prev_cell != self.current_cell \
-            and np.linalg.norm([self.prev_cell,self.desired_cell]) < np.linalg.norm([self.current_cell, self.desired_cell]):
-            self.wrong_cell = True
-            reward = -200
-        elif self.desired_orientation() - pi/8 > self.state[2] and self.desired_orientation() + pi/8 < self.state[2]:
-            reward = 1
-        else:        
-            reward = -1
 
         return reward
 
@@ -310,7 +324,7 @@ class Agent():
         print('... saving model ...')
 
         model_e = self.model_name + f'_{episode}'
-        path = os.getcwd() + '/saved_models/' + self.model_name
+        path = os.getcwd() + '/pybullet/saved_models/' + self.model_name
 
         save_dir_path = os.path.join(path, model_e)
 
@@ -329,7 +343,7 @@ class Agent():
         print('... loading model ...')
 
         model_e = load_model_name + f'_{model_version}'
-        path = os.getcwd() + '/saved_models/' + load_model_name
+        path = os.getcwd() + '/pybullet/saved_models/' + load_model_name
 
         load_dir_path = os.path.join(path, model_e)
 
@@ -341,3 +355,26 @@ class Agent():
         self.target_critic_2.load_checkpoint(load_dir_path)
 
 
+    @staticmethod
+    def unnormalize(n):
+        return 16*n - 8
+    
+    def get_desired_cell(self):
+        return self.cell_path[0]
+
+    def pos2cell(self, x, y):
+        
+        x = self.unnormalize(x)
+        y = self.unnormalize(y)
+
+        cell_x = 0
+        cell_y = 0
+
+        for i in range(16):
+            if x >= -8 + i and x < -8 + (i+1):
+                cell_x = i
+
+            if y >= -8 + i and y < -8 + (i+1):
+                cell_y = i
+
+        return [cell_x, cell_y]

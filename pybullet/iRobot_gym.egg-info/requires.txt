@@ -1,6 +1,6 @@
-gym
-nptyping
-numpy
 pybullet
 scipy
+numpy
+gym
 yamldataclassconfig
+nptyping

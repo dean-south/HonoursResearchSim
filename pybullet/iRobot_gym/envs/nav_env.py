@@ -1,5 +1,6 @@
 import math
 import gym
+from gym import spaces
 import pybullet as p
 from .scenarios import SimpleNavScenario
 from .camera import CameraController
@@ -11,6 +12,10 @@ class SimpleNavEnv(gym.Env):
         self._scenario = scenario
         self._initialized = False
         self._time = 0.0
+
+        self.action_space = spaces.Discrete(2)
+
+        self.observation_space = spaces.Box(low=0, high=1, shape=(4,), dtype=float)
 
         self.observation = dict()
         if self._scenario.agent.task_name == 'reward_rapprochement_goal':

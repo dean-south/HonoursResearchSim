@@ -1,0 +1,7 @@
+Metadata-Version: 2.1
+Name: gym_fastsim
+Version: 0.0.5
+Author: Alex Coninx
+Author-email: coninx@isir.upmc.fr
+Requires-Dist: gym>=0.11.0
+Requires-Dist: pyfastsim

@@ -1,5 +1,7 @@
 setup.py
+controllers/RL_ctr.py
 controllers/__init__.py
+controllers/blank_ctr.py
 controllers/braitenberg.py
 controllers/fixed_structure_nn_numpy.py
 controllers/follow_wall.py
@@ -20,5 +22,6 @@ iRobot_gym/bullet/util.py
 iRobot_gym/bullet/vehicle.py
 iRobot_gym/bullet/world.py
 iRobot_gym/envs/__init__.py
+iRobot_gym/envs/camera.py
 iRobot_gym/envs/nav_env.py
 iRobot_gym/envs/scenarios.py

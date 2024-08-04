@@ -1,7 +1,8 @@
 pybullet/saved_models/
-slurm
-src
-pybullet/Graphs
-pybullet/Data
-Error
-Out
+slurm/
+src/
+pybullet/Graphs/
+pybullet/Data/
+Error/
+Out/
+fastsim/

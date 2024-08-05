@@ -55,9 +55,10 @@ class SimEnv():
 
         # initialize controllers
         if self._ctr == "RL":
+            noise = 0.1 if not self.test_mode else 0
             self._controller = Agent(alpha=0.001, beta=0.001, input_dims=38, tau=0.001, env=self._env, 
-                                     batch_size=128, layer1_size=125, layer2_size=125, n_actions=2,
-                                     model_name=args.model_name, update_actor_interval=10, noise=0.1)                
+                                     batch_size=128, layer1_size=128, layer2_size=128, n_actions=2,
+                                     model_name=args.model_name, update_actor_interval=10, noise=noise)                
             
             if not self.test_mode:
 
@@ -82,17 +83,17 @@ class SimEnv():
                 rew = self._controller.get_reward()            
 
                 if len(self._controller.cell_path) > 0:
-                    state = [*self._info['pose'][:2],
-                        self._info['pose'][-1],
-                        *self._info['velocity'][:2],
-                        self._info['velocity'][-1],
-                        *self.one_hot_cell(self._controller.get_desired_cell())]
+                    state = [*self.normalise_pos(*self._info['pose'][:2]),
+                             self.normalise_theta(self._info['pose'][-1]),
+                             *self.normalise_v(*self._info['velocity'][:2]),
+                             self.normalise_v_theta(self._info['velocity'][-1]),
+                             *self.one_hot_cell(self._controller.get_desired_cell())]
                 else:
-                    state = [*self._info['pose'][:2],
-                        self._info['pose'][-1],
-                        *self._info['velocity'][:2],
-                        self._info['velocity'][-1],
-                        *np.zeros(32)]
+                    state = [*self.normalise_pos(*self._info['pose'][:2]),
+                             self.normalise_theta(self._info['pose'][-1]),
+                             *self.normalise_v(*self._info['velocity'][:2]),
+                             self.normalise_v_theta(self._info['velocity'][-1]),
+                             *np.zeros(32)]
                     done = True  
      
                 if self._controller.wrong_cell:
@@ -182,8 +183,31 @@ class SimEnv():
         cell_y[cell[1]] = 1
 
         return [*cell_x, *cell_y]
+    
+    @staticmethod
+    def normalise_pos(x,y):
+        x = (x + 8)/(16)
+        y = (y + 8)/(16)
 
+        return [x,y]
+    
+    @staticmethod
+    def normalise_theta(theta):
+        theta = (theta + pi)/(2*pi) 
 
+        return theta
+
+    @staticmethod
+    def normalise_v(v_x,v_y):
+        v_x = (v_x + 100)/(200)
+        v_y = (v_y + 100)/(200)
+
+        return [v_x, v_y]
+
+    @staticmethod
+    def normalise_v_theta(v_theta):
+        return (v_theta + 25)/(50)
+    
     def start(self):
         """Forward the simulation until its complete."""  
 
@@ -212,10 +236,10 @@ class SimEnv():
 
             print(f'Starting Episode {e}')
 
-            self._controller.state = [*self._info['pose'][:2],
-                                      self._info['pose'][-1],
-                                      *self._info['velocity'][:2],
-                                      self._info['velocity'][-1],
+            self._controller.state = [*self.normalise_pos(*self._info['pose'][:2]),
+                                      self.normalise_theta(self._info['pose'][-1]),
+                                      *self.normalise_v(*self._info['velocity'][:2]),
+                                      self.normalise_v_theta(self._info['velocity'][-1]),
                                       *self.one_hot_cell(self._controller.get_desired_cell())]
 
             while not self._done:
@@ -263,7 +287,7 @@ class SimEnv():
                 best_score = avg_score
                 if not self.test_mode:
                     self._controller.save_models(e)
-            elif e % 150 == 0 and not self.test_mode:
+            elif e % 500 == 0 and not self.test_mode:
                 self._controller.save_models(e)
 
 

@@ -57,8 +57,8 @@ class SimEnv():
         if self._ctr == "RL":
             noise = 0.1 if not self.test_mode else 0
             self._controller = Agent(alpha=0.001, beta=0.001, input_dims=38, tau=0.001, env=self._env, 
-                                     batch_size=128, layer1_size=128, layer2_size=128, n_actions=2,
-                                     model_name=args.model_name, update_actor_interval=10, noise=noise)                
+                                     batch_size=1024, layer1_size=128, layer2_size=128, n_actions=2,
+                                     model_name=args.model_name, update_actor_interval=10, noise=noise, warmup=1024)                
             
             if not self.test_mode:
 

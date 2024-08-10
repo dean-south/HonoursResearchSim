@@ -1,7 +1,7 @@
 import math
 from math import sin, cos, pi
-import gymnasium as gym
-from gymnasium import spaces
+import gym
+from gym import spaces
 import pybullet as p
 import random
 import numpy as np
@@ -11,14 +11,16 @@ from .camera import CameraController
 
 class SimpleNavEnv(gym.Env):
 
-    def __init__(self, scenario):
+    def __init__(self, scenario, render_mode='rgb_array'):
+        super().__init__()
         self._scenario = scenario
         self._initialized = False
         self._time = 0.0
+        self.render_mode = render_mode
 
-        self.action_space = spaces.Discrete(2)
+        self.action_space = spaces.Box(low=-1, high=1, shape=(38,), dtype=float)
 
-        self.observation_space = spaces.Box(low=0, high=1, shape=(4,), dtype=float)
+        self.observation_space = spaces.Box(low=0, high=1, shape=(38,), dtype=float)
 
         self.path = []
 
@@ -37,7 +39,7 @@ class SimpleNavEnv(gym.Env):
                 self._scenario.agent.task_param)
         elif self._scenario.agent.task_name == 'reward_straight_navigation':
             self._RewardFunction = RewardNavStr(
-                self._scenario.agent.task_param, self._scenario.world.state(), self._scenario.agent.id, self)
+                self._scenario.agent.task_param, self)
             
             self.get_start_pose = self.random_start_pose
 
@@ -55,6 +57,7 @@ class SimpleNavEnv(gym.Env):
     def step(self, action):
         state = self._scenario.world.state()
         # self.observation, _ = self._scenario.agent.step(action=action)
+        self._scenario.agent.step(action=action)
         self.observation = self.get_world_observation()
         done = self._RewardFunction.done(self._scenario.agent.id, state, self.path[0])
         reward = self._RewardFunction.reward(
@@ -68,9 +71,9 @@ class SimpleNavEnv(gym.Env):
         if current_cell == self.path[0]:
             self.path.pop(0)
 
-        return self.observation, reward, done, state[self._scenario.agent.id]
+        return self.observation, reward, done, False, state[self._scenario.agent.id]
 
-    def reset(self):
+    def reset(self, **kwards):
         if not self._initialized:
             self._scenario.world.init()
             self._initialized = True
@@ -94,6 +97,8 @@ class SimpleNavEnv(gym.Env):
             self.camera_controller.camera_pitch,
             self.camera_controller.camera_target_position
         )
+
+        return np.array(self.get_world_observation()), {}
 
     def render(self, **kwargs):
         return self._scenario.world.render(agent_id=self._scenario.agent.id, **kwargs)
@@ -239,15 +244,14 @@ class SimpleNavEnv(gym.Env):
 class RewardNavStr:
     "Reward for training robot to go straight"
 
-    def __init__(self, param, state, agent_id, env) -> None:
+    def __init__(self, param, env) -> None:
         
         self._time_limit = param['time_limit']
-        self.prev_state = state[agent_id]
+        self.prev_state = None
         self.env = env
-        self.agent_id = agent_id
 
     def reward(self, _agent_id, _state, desired_cell):
-        reward = 0
+        reward = -1
 
         state = _state[_agent_id]
 
@@ -258,21 +262,30 @@ class RewardNavStr:
         prev_cell = self.pos2cell(prev_x, prev_y)
 
         if current_cell == desired_cell:
-            reward += 200
+            reward += 20
         elif prev_cell != current_cell and \
             np.linalg.norm([prev_cell, desired_cell]) > np.linalg.norm([current_cell, desired_cell]):
-            reward += 10
+            reward = 10
         elif prev_cell != current_cell and \
             np.linalg.norm([prev_cell, desired_cell]) < np.linalg.norm([current_cell, desired_cell]):
-            reward += -100
+            reward = -10
         else:
-            reward -= 1
+            laserRanges = self.env.get_laserranges()
+            for r in laserRanges:
+                if r < 0.19 and r > 0.14:                           
+                    reward = -10
+                    break
+           
+
 
         self.prev_state = state
 
         return reward
 
     def done(self, _agent_id, _state, desired_cell):
+        if self.prev_state is None:
+            self.prev_state = self.env._scenario.world.state()[self.env._scenario.agent.id]
+
         done = 0
 
         state = _state[_agent_id]
@@ -285,24 +298,22 @@ class RewardNavStr:
         if prev_cell != current_cell and \
             np.linalg.norm([prev_cell, desired_cell]) < np.linalg.norm([current_cell, desired_cell]):
             done = 1
+            print("went to the wrong cell")
         
         laserRanges = self.env.get_laserranges()
         for r in laserRanges:
-            if r < 0.2 and r > 0.1:                           
+            if r < 0.19 and r > 0.14:                           
                 done = True
-                if self._verbose:
-                    print("collision detected")
-                rew = -100
+                print(f'crashed {r=}')
+                break
+
 
         return done
 
     def reset(self):
-        self.env._scenario.world.state()[self.agent_id]
+        self.prev_state = None
 
     def pos2cell(self, x, y):
-        
-        x = self.unnormalize(x)
-        y = self.unnormalize(y)
 
         cell_x = 0
         cell_y = 0

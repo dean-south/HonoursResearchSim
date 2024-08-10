@@ -1,5 +1,5 @@
 import math
-import gymnasium as gym
+import gym
 import pybullet as p
 from .scenarios import SimpleNavScenario
 from .camera import CameraController

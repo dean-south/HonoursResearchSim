@@ -6,7 +6,7 @@ import os
 import random
 import math
 from dataclasses import dataclass
-import gymnasium as gym
+import gym
 
 import numpy as np
 import pybullet_data

@@ -1,7 +1,7 @@
 """This class define the robot, it links the joints of the urdf file to the wheel and the laser."""
 
 from dataclasses import dataclass
-import gymnasium as gym
+import gym
 import pybullet
 
 
@@ -64,7 +64,7 @@ class IRobot:
 
     def _load_model(self, model, initial_pose):
         position, orientation = initial_pose
-        orientation = pybullet.getQuaternionFromEuler(orientation)
+        # orientation = pybullet.getQuaternionFromEuler(orientation)
         return pybullet.loadURDF(model, position, orientation)
 
     def _get_info(self):

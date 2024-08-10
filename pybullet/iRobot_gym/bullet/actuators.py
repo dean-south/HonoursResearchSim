@@ -1,7 +1,7 @@
 """This module is responsible for the movement of the robot."""
 
 from dataclasses import dataclass
-import gymnasium as gym
+import gym
 import numpy as np
 import pybullet
 

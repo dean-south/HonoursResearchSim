@@ -3,7 +3,7 @@ import sys
 import time
 import csv
 import argparse
-import gymnasium as gym
+import gym
 import pybullet as p
 import numpy as np
 import random
@@ -39,7 +39,7 @@ class SimEnv():
     """
 
     def __init__(self):
-        self._env = gym.make(args.env+str('-v0'))
+        self._env = gym.make(args.env+str('-v0'), render_mode="rgb_array")
         self._sleep_time = args.sleep_time
         self._ctr = args.ctr
         self._verbose = args.verbose
@@ -73,7 +73,7 @@ class SimEnv():
 
     def _movement(self, action):
     
-        state, rew, done, info = self._env.step(action)
+        state, rew, done, truncate, info = self._env.step(action)
 
         # print(self._i, end='\r')
         self._i += 1
@@ -160,7 +160,7 @@ class SimEnv():
             self._done = 0
             score = 0
             self._i = -1
-            self._env.reset()         
+            self._controller.state, _ = self._env.reset()         
 
             print(f'Starting Episode {e}')
 
@@ -170,13 +170,15 @@ class SimEnv():
 
                     action = self._controller.get_action()
 
+                    action = [-1,1]
+
                     state_, self._rew, self._done, self._info = self._movement(action)
                 
                     if not self.test_mode:
                         self._controller.remember(self._controller.state, action, self._rew, state_, self._done)
                         self._controller.learn()
 
-                    if self._i == 10000:
+                    if self._i == 1000:
                         self._done = 1
 
                     score += self._rew
@@ -297,7 +299,7 @@ def main():
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description='Launch pybullet simulation run.')
-    parser.add_argument('--env', type=str, default="2018apec",
+    parser.add_argument('--env', type=str, default="blank_gui",
                         help='environnement: kitchen, maze_hard, race_track')
     parser.add_argument('--ctr', type=str, default="RL",
                         help='controller: wall, rule, braitenberg, novelty, RL')

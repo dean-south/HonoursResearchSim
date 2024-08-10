@@ -46,8 +46,9 @@ class IRobot:
                 self._config.urdf_file, initial_pose=pose)
         else:
             pos, orn = pose
-            pybullet.resetBasePositionAndOrientation(
-                self._id, pos, pybullet.getQuaternionFromEuler(orn))
+            # pybullet.resetBasePositionAndOrientation(
+            #     self._id, pos, pybullet.getQuaternionFromEuler(orn))
+            pybullet.resetBasePositionAndOrientation(self._id, pos, orn)
 
         for sensor in self.sensors:
             joint_index = None

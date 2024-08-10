@@ -1,6 +1,6 @@
 import math
-import gym
-from gym import spaces
+import gymnasium as gym
+from gymnasium import spaces
 import pybullet as p
 from .scenarios import SimpleNavScenario
 from .camera import CameraController

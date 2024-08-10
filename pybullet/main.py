@@ -3,7 +3,7 @@ import sys
 import time
 import csv
 import argparse
-import gym
+import gymnasium as gym
 import pybullet as p
 import numpy as np
 import random
@@ -324,7 +324,7 @@ class SimEnv():
         # Extract the y-values
         y_scores = data['scores'].values
         y_avg_scores = data['avg_scores'].values
-        y_avg_rewards = data['avg_rewards']
+        y_avg_rewards = data['avg_rewards'].values
 
         # Generate x-values
         x = data['episodes'].values

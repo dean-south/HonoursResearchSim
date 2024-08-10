@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from typing import Any, TypeVar, Generic
 import math
 
-import gym
+import gymnasium as gym
 import numpy as np
 from nptyping import NDArray
 import pybullet as p

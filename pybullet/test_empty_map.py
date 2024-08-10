@@ -1,7 +1,7 @@
 "File to test the robot in a empty map"
 import os
 import time
-import gym
+import gymnasium as gym
 from iRobot_gym.envs import SimpleNavEnv
 import numpy as np
 

@@ -1,5 +1,5 @@
 import os
-from gym.envs.registration import register
+from gymnasium.envs.registration import register
 from .envs import SimpleNavScenario, SimpleNavEnv
 
 base_path = os.path.dirname(__file__)

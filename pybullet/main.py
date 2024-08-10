@@ -57,8 +57,8 @@ class SimEnv():
         if self._ctr == "RL":
             noise = 0.1 if not self.test_mode else 0
             self._controller = Agent(alpha=0.001, beta=0.001, input_dims=38, tau=0.001, env=self._env, 
-                                     batch_size=128, layer1_size=128, layer2_size=128, n_actions=2,
-                                     model_name=args.model_name, update_actor_interval=10, noise=noise)                
+                                     batch_size=1024, layer1_size=128, layer2_size=128, n_actions=2,
+                                     model_name=args.model_name, update_actor_interval=10, noise=noise, warmup=1024)                
             
             if not self.test_mode:
 
@@ -71,44 +71,14 @@ class SimEnv():
             print("\nNo controller named", self._ctr)
             sys.exit()
 
-    def _movement(self, action, nbr=1):
-        for _ in range(nbr):
-            state, rew, done, info = self._env.step(action)
+    def _movement(self, action):
+    
+        state, rew, done, info = self._env.step(action)
 
-            # print(self._i, end='\r')
-            self._i += 1
+        # print(self._i, end='\r')
+        self._i += 1
 
-            if self._i > 0:
-
-                rew = self._controller.get_reward()            
-
-                if len(self._controller.cell_path) > 0:
-                    state = [*self.normalise_pos(*self._info['pose'][:2]),
-                             self.normalise_theta(self._info['pose'][-1]),
-                             *self.normalise_v(*self._info['velocity'][:2]),
-                             self.normalise_v_theta(self._info['velocity'][-1]),
-                             *self.one_hot_cell(self._controller.get_desired_cell())]
-                else:
-                    state = [*self.normalise_pos(*self._info['pose'][:2]),
-                             self.normalise_theta(self._info['pose'][-1]),
-                             *self.normalise_v(*self._info['velocity'][:2]),
-                             self.normalise_v_theta(self._info['velocity'][-1]),
-                             *np.zeros(32)]
-                    done = True  
-     
-                if self._controller.wrong_cell:
-                    self._controller.wrong_cell = False
-                    done = True
-
-                laserRanges = self._env.get_laserranges()
-                for r in laserRanges:
-                    if r < 0.2 and r > 0.1:                           
-                        done = True
-                        if self._verbose:
-                            print("collision detected")
-                        rew = -100
-
-            time.sleep(self._sleep_time)
+        time.sleep(self._sleep_time)
 
         return state, rew, done, info
 
@@ -175,38 +145,6 @@ class SimEnv():
 
         return [start_x, start_y, 0], orientation
 
-    def one_hot_cell(self, cell):
-        cell_x = np.zeros(16)
-        cell_y = np.zeros(16)
-
-        cell_x[cell[0]] = 1
-        cell_y[cell[1]] = 1
-
-        return [*cell_x, *cell_y]
-    
-    @staticmethod
-    def normalise_pos(x,y):
-        x = (x + 8)/(16)
-        y = (y + 8)/(16)
-
-        return [x,y]
-    
-    @staticmethod
-    def normalise_theta(theta):
-        theta = (theta + pi)/(2*pi) 
-
-        return theta
-
-    @staticmethod
-    def normalise_v(v_x,v_y):
-        v_x = (v_x + 100)/(200)
-        v_y = (v_y + 100)/(200)
-
-        return [v_x, v_y]
-
-    @staticmethod
-    def normalise_v_theta(v_theta):
-        return (v_theta + 25)/(50)
     
     def start(self):
         """Forward the simulation until its complete."""  
@@ -222,25 +160,9 @@ class SimEnv():
             self._done = 0
             score = 0
             self._i = -1
-            self._env.reset()
-
-            if self.train == 'nav_cell':
-                start_pos, start_ori = self.random_start_pose()
-                p.resetBasePositionAndOrientation(3, start_pos, start_ori)
-              
-                self._obs, self._rew, self._done, self._info = self._movement([0, 0])
-
-                self._controller.cell_path = self.create_str_path(self.pose_to_cell(start_pos[:2]))
-
-         
+            self._env.reset()         
 
             print(f'Starting Episode {e}')
-
-            self._controller.state = [*self.normalise_pos(*self._info['pose'][:2]),
-                                      self.normalise_theta(self._info['pose'][-1]),
-                                      *self.normalise_v(*self._info['velocity'][:2]),
-                                      self.normalise_v_theta(self._info['velocity'][-1]),
-                                      *self.one_hot_cell(self._controller.get_desired_cell())]
 
             while not self._done:
 
@@ -248,17 +170,14 @@ class SimEnv():
 
                     action = self._controller.get_action()
 
-                    self._controller.prev_state = self._controller.state
-
                     state_, self._rew, self._done, self._info = self._movement(action)
-                    
-                    if self._i == 10000:
-                        self._done = 1
-
-
+                
                     if not self.test_mode:
                         self._controller.remember(self._controller.state, action, self._rew, state_, self._done)
                         self._controller.learn()
+
+                    if self._i == 10000:
+                        self._done = 1
 
                     score += self._rew
                     self._controller.state = state_

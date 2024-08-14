@@ -18,7 +18,7 @@ class SimpleNavEnv(gym.Env):
         self._time = 0.0
         self.render_mode = render_mode
 
-        self.action_space = spaces.Box(low=-1, high=1, shape=(38,), dtype=float)
+        self.action_space = spaces.Box(low=-1, high=1, shape=(2,), dtype=float)
 
         self.observation_space = spaces.Box(low=0, high=1, shape=(38,), dtype=float)
 
@@ -59,19 +59,21 @@ class SimpleNavEnv(gym.Env):
         # self.observation, _ = self._scenario.agent.step(action=action)
         self._scenario.agent.step(action=action)
         self.observation = self.get_world_observation()
-        done = self._RewardFunction.done(self._scenario.agent.id, state, self.path[0])
-        reward = self._RewardFunction.reward(
-            self._scenario.agent.id, state, self.path[0])
+
+        reward = self._RewardFunction.reward(self._scenario.agent.id, state)
+       
+        current_cell = self.pos2cell(*state[self._scenario.agent.id]['pose'][:2])
+        if current_cell == self.path[0]:
+            self.path.pop(0)
+
+        done = self._RewardFunction.done(self._scenario.agent.id, state)
+       
         self._time = self._scenario.world.update(
             agent_id=self._scenario.agent.id)
         self.update_camera()
 
-        current_cell = self.pos2cell(*state[self._scenario.agent.id]['pose'][:2])
-
-        if current_cell == self.path[0]:
-            self.path.pop(0)
-
-        return self.observation, reward, done, False, state[self._scenario.agent.id]
+        
+        return self.observation, reward, done, state[self._scenario.agent.id]
 
     def reset(self, **kwards):
         if not self._initialized:
@@ -98,7 +100,7 @@ class SimpleNavEnv(gym.Env):
             self.camera_controller.camera_target_position
         )
 
-        return np.array(self.get_world_observation()), {}
+        return np.array(self.get_world_observation())
 
     def render(self, **kwargs):
         return self._scenario.world.render(agent_id=self._scenario.agent.id, **kwargs)
@@ -250,7 +252,10 @@ class RewardNavStr:
         self.prev_state = None
         self.env = env
 
-    def reward(self, _agent_id, _state, desired_cell):
+    def reward(self, _agent_id, _state):
+        if self.prev_state is None:
+            self.prev_state = self.env._scenario.world.state()[self.env._scenario.agent.id]
+
         reward = -1
 
         state = _state[_agent_id]
@@ -261,13 +266,13 @@ class RewardNavStr:
         current_cell = self.pos2cell(x,y)
         prev_cell = self.pos2cell(prev_x, prev_y)
 
-        if current_cell == desired_cell:
+        if (len(self.env.path) and current_cell == self.env.path[0]) or not len(self.env.path):
             reward += 20
-        elif prev_cell != current_cell and \
-            np.linalg.norm([prev_cell, desired_cell]) > np.linalg.norm([current_cell, desired_cell]):
+        elif len(self.env.path) and prev_cell != current_cell and \
+            np.linalg.norm([prev_cell, self.env.path[0]]) > np.linalg.norm([current_cell, self.env.path[0]]):
             reward = 10
-        elif prev_cell != current_cell and \
-            np.linalg.norm([prev_cell, desired_cell]) < np.linalg.norm([current_cell, desired_cell]):
+        elif len(self.env.path) and prev_cell != current_cell and \
+            np.linalg.norm([prev_cell, self.env.path[0]]) < np.linalg.norm([current_cell, self.env.path[0]]):
             reward = -10
         else:
             laserRanges = self.env.get_laserranges()
@@ -279,14 +284,14 @@ class RewardNavStr:
 
 
         self.prev_state = state
-
+ 
         return reward
 
-    def done(self, _agent_id, _state, desired_cell):
+    def done(self, _agent_id, _state):
         if self.prev_state is None:
             self.prev_state = self.env._scenario.world.state()[self.env._scenario.agent.id]
 
-        done = 0
+        done = False
 
         state = _state[_agent_id]
         x,y = state['pose'][:2]
@@ -295,17 +300,20 @@ class RewardNavStr:
         prev_x, prev_y = self.prev_state['pose'][:2]
         prev_cell = self.pos2cell(prev_x, prev_y)
 
-        if prev_cell != current_cell and \
-            np.linalg.norm([prev_cell, desired_cell]) < np.linalg.norm([current_cell, desired_cell]):
-            done = 1
-            print("went to the wrong cell")
+        if len(self.env.path) == 0:
+            done = True
+        elif prev_cell != current_cell and \
+            np.linalg.norm([prev_cell, self.env.path[0]]) < np.linalg.norm([current_cell, self.env.path[0]]):
+            done = True
+            # print("went to the wrong cell")
+        else:
         
-        laserRanges = self.env.get_laserranges()
-        for r in laserRanges:
-            if r < 0.19 and r > 0.14:                           
-                done = True
-                print(f'crashed {r=}')
-                break
+            laserRanges = self.env.get_laserranges()
+            for r in laserRanges:
+                if r < 0.19 and r > 0.14:                           
+                    done = True
+                    # print(f'crashed {r=}')
+                    break
 
 
         return done

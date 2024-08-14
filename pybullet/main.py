@@ -9,7 +9,8 @@ import numpy as np
 import random
 import matplotlib.pyplot as plt
 import pandas as pd
-
+from stable_baselines3 import TD3
+from stable_baselines3.common.noise import NormalActionNoise, OrnsteinUhlenbeckActionNoise
 from math import sin, cos, pi
 
 from iRobot_gym.envs import SimpleNavEnv
@@ -67,6 +68,13 @@ class SimEnv():
 
                 path = os.path.join(os.getcwd() + '/pybullet/saved_models', args.model_name)
                 os.mkdir(path)
+        elif self._ctr == "sb3":
+            n_actions = self._env.action_space.shape[-1]
+            action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=0.1 * np.ones(n_actions))
+
+            self.model = TD3("MlpPolicy", self._env, action_noise=action_noise, verbose=1)
+            self.model.learn(total_timesteps=1000000, log_interval=10)
+            self.model.save("td3_test")
         else:
             print("\nNo controller named", self._ctr)
             sys.exit()
@@ -160,34 +168,40 @@ class SimEnv():
             self._done = 0
             score = 0
             self._i = -1
-            self._controller.state, _ = self._env.reset()         
+            state = self._env.reset()         
 
             print(f'Starting Episode {e}')
 
             while not self._done:
 
                 try:
+                    if self._ctr == "RL":
+                        action = self._controller.get_action()
 
-                    action = self._controller.get_action()
-
-                    action = [-1,1]
-
-                    state_, self._rew, self._done, self._info = self._movement(action)
-                
-                    if not self.test_mode:
-                        self._controller.remember(self._controller.state, action, self._rew, state_, self._done)
-                        self._controller.learn()
-
-                    if self._i == 1000:
-                        self._done = 1
-
-                    score += self._rew
-                    self._controller.state = state_
-
-                    # print(self._info['pose'])
-                    self._controller.reset()
-
+                        state_, self._rew, self._done, self._info = self._movement(action)
                     
+                        if not self.test_mode:
+                            self._controller.remember(state, action, self._rew, state_, self._done)
+                            self._controller.learn()
+
+                      
+                        score += self._rew
+                        state = state_
+
+                        # print(self._info['pose'])
+                        self._controller.reset()
+                    elif self._ctr == 'sb3':
+                        vec_env = self.model.get_env()
+
+                        obs = vec_env.reset()
+                        action, _states = self.model.predict(obs)
+                        obs, rewards, self._done, info = vec_env.step(action)
+                        vec_env.render("human")
+                        score += rewards
+
+                        if self._i == 10000:
+                            self._done = 1
+
                 except KeyboardInterrupt:
                     print(' The simulation was forcibly stopped.')
                     kill_sim = True
@@ -204,12 +218,12 @@ class SimEnv():
             self.save_scores(score_history, avg_score_history, avg_reward_history)
             self.create_graph()
 
-            if avg_score > best_score:
-                best_score = avg_score
-                if not self.test_mode:
-                    self._controller.save_models(e)
-            elif e % 500 == 0 and not self.test_mode:
-                self._controller.save_models(e)
+            # if avg_score > best_score and self._ctr == "RL":
+            #     best_score = avg_score
+            #     if not self.test_mode:
+            #         self._controller.save_models(e)
+            # elif e % 500 == 0 and not self.test_mode:
+            #     self._controller.save_models(e)
 
 
             print(f"episode {e}, score {score}, average score {avg_score}, average reward {score/self._i}, time steps {self._i}")

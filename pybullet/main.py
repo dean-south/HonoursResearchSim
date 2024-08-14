@@ -9,6 +9,8 @@ import numpy as np
 import random
 import matplotlib.pyplot as plt
 import pandas as pd
+import wandb
+from wandb.integration.sb3 import WandbCallback
 from stable_baselines3 import TD3
 from stable_baselines3.common.noise import NormalActionNoise, OrnsteinUhlenbeckActionNoise
 from math import sin, cos, pi
@@ -72,9 +74,29 @@ class SimEnv():
             n_actions = self._env.action_space.shape[-1]
             action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=0.1 * np.ones(n_actions))
 
-            self.model = TD3("MlpPolicy", self._env, action_noise=action_noise, verbose=1)
-            self.model.learn(total_timesteps=1000000, log_interval=10)
+            config = {
+            "policy_type": "MlpPolicy",
+            "total_timesteps": 10000,
+            "env_name": "Blank-v0",
+            }
+            run = wandb.init(
+            project="Honours Research",
+            config=config,
+            sync_tensorboard=True,  # auto-upload sb3's tensorboard metrics
+            save_code=True,  # optional
+            )
+
+            self.model = TD3("MlpPolicy", self._env, action_noise=action_noise, verbose=1, tensorboard_log=f"runs/{run.id}")
+            self.model.learn(total_timesteps=10000, log_interval=10, 
+                            callback=WandbCallback(
+                                gradient_save_freq=1000,
+                                model_save_path=f"models/{run.id}",
+                                verbose=2,
+                            ),
+                        )
             self.model.save("td3_test")
+
+            run.finish()
         else:
             print("\nNo controller named", self._ctr)
             sys.exit()
@@ -164,7 +186,7 @@ class SimEnv():
 
         kill_sim = False
 
-        for e in range(self._episodes):
+        for e in range(self._episodes*0):
             self._done = 0
             score = 0
             self._i = -1

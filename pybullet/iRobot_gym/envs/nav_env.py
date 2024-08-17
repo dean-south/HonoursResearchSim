@@ -42,15 +42,13 @@ class SimpleNavEnv(gym.Env):
                 self._scenario.agent.task_param, self)
             
             self.get_start_pose = self.random_start_pose
-            self.get_start_cell = self.get_random_start
             self.get_path = self.get_nav_bend_path
         elif self._scenario.agent.task_name == 'carry_on':
             self._RewardFunction = RewardCarryOn(
                 self._scenario.agent.task_param, self)
 
-            self.get_start_pose = 
-            self.get_start_cell = 
-            self.get_path =
+            self.get_start_pose = self.carry_on_start_pose
+            self.get_path = self.get_carry_on_path
             
         # Your existing initialization code here
         
@@ -170,7 +168,7 @@ class SimpleNavEnv(gym.Env):
 
         return cell_path
 
-    def get_random_start(self):
+    def get_start_cell(self):
         x,y,z = self._scenario.world._get_starting_position(self._scenario.agent)[0]
 
         cell_x = 0
@@ -203,11 +201,44 @@ class SimpleNavEnv(gym.Env):
         return [[start_x, start_y, 0], orientation]
 
     def carry_on_start_pose(self):
+        if self._RewardFunction.reset_pose:
+            self._RewardFunction = False
+            return self.random_start_pose()
+        
         state = self._scenario.world.state()[self._scenario.agent.id] 
 
-        orientation = p.q
+        pos = state['pose'][:3]
 
-        return state[state['pose'][:3],]
+        orientation = p.getQuaternionFromEuler(state['pose'][3:])
+
+        return [pos, orientation]
+    
+    def get_carry_on_path(self):
+        curr_cell = self.get_start_cell()
+
+        cell_path = []
+
+        direction = random.randint(0,3)
+
+        d_x = int(sin(direction * pi/2))
+        d_y = int(cos(direction * pi/2))
+
+        dist = random.randint(1,15)
+
+        des_cell = [int(curr_cell[0] + d_x*dist), int(curr_cell[1] + d_y*dist)]
+
+        if des_cell[0] < 0:
+            des_cell[0] = 0
+        elif des_cell[1] < 0:
+            des_cell[1] = 0
+        elif des_cell[0] > 15:
+            des_cell[0] = 15
+        elif des_cell[1] > 15:
+            des_cell[1] = 15
+
+        cell_path.append(des_cell)
+
+        return cell_path
     
     def one_hot_cell(self, cell):
         cell_x = np.zeros(16)
@@ -303,6 +334,7 @@ class RewardNavStr:
         self._time_limit = param['time_limit']
         self.prev_state = None
         self.env = env
+        self.reset_pose = False
 
     def reward(self, _agent_id, _state):
         if self.prev_state is None:
@@ -357,6 +389,7 @@ class RewardNavStr:
         elif prev_cell != current_cell and \
             np.linalg.norm([prev_cell, self.env.path[0]]) < np.linalg.norm([current_cell, self.env.path[0]]):
             done = True
+            self.reset_pose = True
             # print("went to the wrong cell")
         else:
         
@@ -364,6 +397,7 @@ class RewardNavStr:
             for r in laserRanges:
                 if r < 0.19 and r > 0.14:                           
                     done = True
+                    self.reset_pose
                     # print(f'crashed {r=}')
                     break
 

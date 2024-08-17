@@ -76,7 +76,7 @@ class SimEnv():
 
             config = {
             "policy_type": "MlpPolicy",
-            "total_timesteps": 10000,
+            "total_timesteps": 10000000,
             "env_name": "Blank-v0",
             }
             run = wandb.init(
@@ -86,8 +86,16 @@ class SimEnv():
             save_code=True,  # optional
             )
 
-            self.model = TD3("MlpPolicy", self._env, action_noise=action_noise, verbose=1, tensorboard_log=f"runs/{run.id}")
-            self.model.learn(total_timesteps=10000, log_interval=10, 
+            self.model = TD3(
+                "MlpPolicy",
+                self._env, 
+                action_noise=action_noise, 
+                verbose=1, 
+                tensorboard_log=f"runs/{run.id}",
+                tau=0.005,
+                batch_size=256,
+                policy_delay=10)
+            self.model.learn(total_timesteps=10000000, log_interval=10, 
                             callback=WandbCallback(
                                 gradient_save_freq=1000,
                                 model_save_path=f"models/{run.id}",
@@ -246,15 +254,8 @@ class SimEnv():
             #         self._controller.save_models(e)
             # elif e % 500 == 0 and not self.test_mode:
             #     self._controller.save_models(e)
-
-
-            print(f"episode {e}, score {score}, average score {avg_score}, average reward {score/self._i}, time steps {self._i}")
             # p.resetBasePositionAndOrientation(3, [-9.3, -9.25, 0.0], [0, 0, 1, 1])
 
-            
-        print("training is completed")
-        print("Number of steps:", self._i)
-        print("Simulation time:", self._info['time'], "s\n")
         self._env.close()
 
     def save_scores(self, scores, avg_scores, avg_rewards):

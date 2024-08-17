@@ -42,9 +42,15 @@ class SimpleNavEnv(gym.Env):
                 self._scenario.agent.task_param, self)
             
             self.get_start_pose = self.random_start_pose
-
+            self.get_start_cell = self.get_random_start
             self.get_path = self.get_nav_bend_path
-            
+        elif self._scenario.agent.task_name == 'carry_on':
+            self._RewardFunction = RewardCarryOn(
+                self._scenario.agent.task_param, self)
+
+            self.get_start_pose = 
+            self.get_start_cell = 
+            self.get_path =
             
         # Your existing initialization code here
         
@@ -164,7 +170,7 @@ class SimpleNavEnv(gym.Env):
 
         return cell_path
 
-    def get_start_cell(self):
+    def get_random_start(self):
         x,y,z = self._scenario.world._get_starting_position(self._scenario.agent)[0]
 
         cell_x = 0
@@ -195,6 +201,13 @@ class SimpleNavEnv(gym.Env):
         orientation = directions[d]
 
         return [[start_x, start_y, 0], orientation]
+
+    def carry_on_start_pose(self):
+        state = self._scenario.world.state()[self._scenario.agent.id] 
+
+        orientation = p.q
+
+        return state[state['pose'][:3],]
     
     def one_hot_cell(self, cell):
         cell_x = np.zeros(16)
@@ -242,6 +255,45 @@ class SimpleNavEnv(gym.Env):
                 cell_y = i
 
         return [cell_x, cell_y]
+    
+class RewardCarryOn:
+    "End episode when you reach goal cell. Start next episode immidiately"
+
+    def __init__(self, param, env) -> None:
+        
+        self._time_limit = param['time_limit']
+        self.prev_state = None
+        self.env = env
+
+    def reward(self, _agent_id, _state):
+        if self.prev_state is None:
+            self.prev_state = self.env._scenario.world.state()[self.env._scenario.agent.id]
+
+        reward = -1
+
+        state = _state[_agent_id]
+
+        x,y = state['pose'][:2]
+        prev_x, prev_y = self.prev_state['pose'][:2]
+
+        current_cell = self.pos2cell(x,y)
+        prev_cell = self.pos2cell(prev_x, prev_y)
+
+        if (len(self.env.path) and current_cell == self.env.path[0]) or not len(self.env.path):
+            reward += 20
+        elif len(self.env.path) and prev_cell != current_cell and \
+            np.linalg.norm([prev_cell, self.env.path[0]]) > np.linalg.norm([current_cell, self.env.path[0]]):
+            reward = 10
+        elif len(self.env.path) and prev_cell != current_cell and \
+            np.linalg.norm([prev_cell, self.env.path[0]]) < np.linalg.norm([current_cell, self.env.path[0]]):
+            reward = -10
+        else:
+            laserRanges = self.env.get_laserranges()
+            for r in laserRanges:
+                if r < 0.19 and r > 0.14:                           
+                    reward = -10
+                    break
+
 
 class RewardNavStr:
     "Reward for training robot to go straight"
@@ -300,7 +352,7 @@ class RewardNavStr:
         prev_x, prev_y = self.prev_state['pose'][:2]
         prev_cell = self.pos2cell(prev_x, prev_y)
 
-        if len(self.env.path) == 0:
+        if current_cell == self.env.path[0]:
             done = True
         elif prev_cell != current_cell and \
             np.linalg.norm([prev_cell, self.env.path[0]]) < np.linalg.norm([current_cell, self.env.path[0]]):

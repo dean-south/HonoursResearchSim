@@ -201,10 +201,12 @@ class SimpleNavEnv(gym.Env):
 
     def carry_on_start_pose(self):
         if self._RewardFunction.reset_pose:
-            self._RewardFunction = False
+            # print('poes')
+            self._RewardFunction.reset_pose = False
             return self.random_start_pose()
         
         if self._RewardFunction.prev_state is None:
+            # print('cunt')
             return self.random_start_pose()
         else:
             
@@ -351,6 +353,8 @@ class RewardCarryOn:
         elif prev_cell != current_cell and \
             np.linalg.norm([prev_cell, self.env.path[0]]) < np.linalg.norm([current_cell, self.env.path[0]]):
             done = True
+            self.reset_pose = True
+
             # print("went to the wrong cell")
         else:
         
@@ -358,6 +362,7 @@ class RewardCarryOn:
             for r in laserRanges:
                 if r < 0.19 and r > 0.14:                           
                     done = True
+                    self.reset_pose = True
                     # print(f'crashed {r=}')
                     break
 

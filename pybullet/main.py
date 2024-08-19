@@ -79,8 +79,8 @@ class SimEnv():
             "total_timesteps": 10000000,
             "env_name": "Blank-v0",
             }
-            run = wandb.init(
-            project="Carry On",
+            self.run = wandb.init(
+            project="Honours Research",
             config=config,
             sync_tensorboard=True,  # auto-upload sb3's tensorboard metrics
             save_code=True,  # optional
@@ -91,32 +91,23 @@ class SimEnv():
                 self._env, 
                 action_noise=action_noise, 
                 verbose=1, 
-                tensorboard_log=f"runs/{run.id}",
+                tensorboard_log=f"runs/{self.run.id}",
                 tau=0.005,
                 batch_size=256,
-                policy_delay=10,
-                gamma=0.85)
-            self.model.learn(total_timesteps=10000000, log_interval=10, 
-                            callback=WandbCallback(
-                                model_save_freq=10000,
-                                model_save_path=f"models/{run.id}",
-                                verbose=2,
-                            ),
-                        )
+                policy_delay=10)
 
-            run.finish()
         else:
             print("\nNo controller named", self._ctr)
             sys.exit()
 
     def _movement(self, action):
     
-        state, rew, done, truncate, info = self._env.step(action)
+        state, rew, done, info = self._env.step(action)
 
         # print(self._i, end='\r')
         self._i += 1
 
-        time.sleep(self._sleep_time)
+        # time.sleep(self._sleep_time)
 
         return state, rew, done, info
 
@@ -194,7 +185,16 @@ class SimEnv():
 
         kill_sim = False
 
-        for e in range(self._episodes*0):
+        self.model.learn(total_timesteps=10000000, log_interval=10, 
+                callback=WandbCallback(
+                    gradient_save_freq=1000,
+                    model_save_path=f"models/{self.run.id}",
+                    verbose=2,
+                ),
+            )
+        self.run.finish()
+
+        for e in range(self._episodes):
             self._done = 0
             score = 0
             self._i = -1
@@ -221,16 +221,24 @@ class SimEnv():
                         # print(self._info['pose'])
                         self._controller.reset()
                     elif self._ctr == 'sb3':
-                        vec_env = self.model.get_env()
 
-                        obs = vec_env.reset()
-                        action, _states = self.model.predict(obs)
-                        obs, rewards, self._done, info = vec_env.step(action)
-                        vec_env.render("human")
-                        score += rewards
+                        if args.test_model is None:
+                            self.model.learn(total_timesteps=10000000, log_interval=10, 
+                                    callback=WandbCallback(
+                                        gradient_save_freq=1000,
+                                        model_save_path=f"models/{self.run.id}",
+                                        verbose=2,
+                                    ),
+                                )
+                            self.run.finish()
+                        else:
+                            self.model.set_parameters(f'./models/{args.test_model}')
 
-                        if self._i == 10000:
-                            self._done = 1
+                            action = self.model.predict(state)
+
+                            state, rew, self._done, info = self._movement(action)
+
+                       
 
                 except KeyboardInterrupt:
                     print(' The simulation was forcibly stopped.')
@@ -348,13 +356,13 @@ if __name__ == "__main__":
                         help='verbose for controller: True or False')
     parser.add_argument('--file_name', type=str,
                         default='NoveltyFitness/9/maze_nsfit9-gen38-p0', help='file name of the invidual to load if ctr=novelty')
-    parser.add_argument('--episodes', type=int, default=1000000,
+    parser.add_argument('--episodes', type=int, default=1,
                         help='how many training episodes')
     parser.add_argument('--model_name', type=str, default='model',
                         help='name of the model being trained')
     parser.add_argument('--test_mode', type=bool, default=False,
                         help="set true or false for test mode")
-    parser.add_argument('--load_model', type=str, default='',
+    parser.add_argument('--load_model', type=str, default=None,
                         help="give name of pre-trained model to load")
     parser.add_argument('--model_version', type=int, default=0,
                         help="if load_model isn't blank, state which version of the model you want to load")

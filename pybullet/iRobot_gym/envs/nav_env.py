@@ -329,6 +329,8 @@ class RewardCarryOn:
                     reward = -10
                     break
 
+        return reward
+
     def done(self, _agent_id, _state):
         if self.prev_state is None:
             self.prev_state = self.env._scenario.world.state()[self.env._scenario.agent.id]
@@ -456,7 +458,6 @@ class RewardNavStr:
                     done = True
                     # print(f'crashed {r=}')
                     break
-
 
         return done
 

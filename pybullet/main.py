@@ -80,7 +80,7 @@ class SimEnv():
             "env_name": "Blank-v0",
             }
             run = wandb.init(
-            project="Honours Research",
+            project="Carry On",
             config=config,
             sync_tensorboard=True,  # auto-upload sb3's tensorboard metrics
             save_code=True,  # optional
@@ -94,15 +94,15 @@ class SimEnv():
                 tensorboard_log=f"runs/{run.id}",
                 tau=0.005,
                 batch_size=256,
-                policy_delay=10)
+                policy_delay=10,
+                gamma=0.85)
             self.model.learn(total_timesteps=10000000, log_interval=10, 
                             callback=WandbCallback(
-                                gradient_save_freq=1000,
+                                model_save_freq=10000,
                                 model_save_path=f"models/{run.id}",
                                 verbose=2,
                             ),
                         )
-            self.model.save("td3_test")
 
             run.finish()
         else:

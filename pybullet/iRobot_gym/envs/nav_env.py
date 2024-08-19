@@ -67,10 +67,9 @@ class SimpleNavEnv(gym.Env):
         reward = self._RewardFunction.reward(self._scenario.agent.id, state)
        
         current_cell = self.pos2cell(*state[self._scenario.agent.id]['pose'][:2])
+        done = self._RewardFunction.done(self._scenario.agent.id, state)
         if current_cell == self.path[0]:
             self.path.pop(0)
-
-        done = self._RewardFunction.done(self._scenario.agent.id, state)
        
         self._time = self._scenario.world.update(
             agent_id=self._scenario.agent.id)

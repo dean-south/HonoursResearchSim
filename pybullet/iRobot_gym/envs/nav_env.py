@@ -204,11 +204,15 @@ class SimpleNavEnv(gym.Env):
             self._RewardFunction = False
             return self.random_start_pose()
         
-        state = self._scenario.world.state()[self._scenario.agent.id] 
+        if self._RewardFunction.prev_state is None:
+            return self.random_start_pose()
+        else:
+            
+            state = self._RewardFunction.prev_state
 
-        pos = state['pose'][:3]
+            pos = state['pose'][:3]
 
-        orientation = p.getQuaternionFromEuler(state['pose'][3:])
+            orientation = p.getQuaternionFromEuler(state['pose'][3:])
 
         return [pos, orientation]
     
@@ -294,45 +298,6 @@ class RewardCarryOn:
         self._time_limit = param['time_limit']
         self.prev_state = None
         self.env = env
-
-    def reward(self, _agent_id, _state):
-        if self.prev_state is None:
-            self.prev_state = self.env._scenario.world.state()[self.env._scenario.agent.id]
-
-        reward = -1
-
-        state = _state[_agent_id]
-
-        x,y = state['pose'][:2]
-        prev_x, prev_y = self.prev_state['pose'][:2]
-
-        current_cell = self.pos2cell(x,y)
-        prev_cell = self.pos2cell(prev_x, prev_y)
-
-        if (len(self.env.path) and current_cell == self.env.path[0]) or not len(self.env.path):
-            reward += 20
-        elif len(self.env.path) and prev_cell != current_cell and \
-            np.linalg.norm([prev_cell, self.env.path[0]]) > np.linalg.norm([current_cell, self.env.path[0]]):
-            reward = 10
-        elif len(self.env.path) and prev_cell != current_cell and \
-            np.linalg.norm([prev_cell, self.env.path[0]]) < np.linalg.norm([current_cell, self.env.path[0]]):
-            reward = -10
-        else:
-            laserRanges = self.env.get_laserranges()
-            for r in laserRanges:
-                if r < 0.19 and r > 0.14:                           
-                    reward = -10
-                    break
-
-
-class RewardNavStr:
-    "Reward for training robot to go straight"
-
-    def __init__(self, param, env) -> None:
-        
-        self._time_limit = param['time_limit']
-        self.prev_state = None
-        self.env = env
         self.reset_pose = False
 
     def reward(self, _agent_id, _state):
@@ -363,12 +328,6 @@ class RewardNavStr:
                 if r < 0.19 and r > 0.14:                           
                     reward = -10
                     break
-           
-
-
-        self.prev_state = state
- 
-        return reward
 
     def done(self, _agent_id, _state):
         if self.prev_state is None:
@@ -382,6 +341,8 @@ class RewardNavStr:
 
         prev_x, prev_y = self.prev_state['pose'][:2]
         prev_cell = self.pos2cell(prev_x, prev_y)
+
+        self.prev_state = state
 
         if current_cell == self.env.path[0]:
             done = True
@@ -397,6 +358,104 @@ class RewardNavStr:
                 if r < 0.19 and r > 0.14:                           
                     done = True
                     self.reset_pose
+                    # print(f'crashed {r=}')
+                    break
+
+
+        return done
+    
+    def reset(self):
+        self.prev_state = None
+
+    def get_prev_state(self):
+        if self.prev_state is None:
+            self.prev_state = self.env._scenario.world.state()[self.env._scenario.agent.id]
+        
+        return self.prev_state
+
+
+    def pos2cell(self, x, y):
+
+        cell_x = 0
+        cell_y = 0
+
+        for i in range(16):
+            if x >= -8 + i and x < -8 + (i+1):
+                cell_x = i
+
+            if y >= -8 + i and y < -8 + (i+1):
+                cell_y = i
+
+        return [cell_x, cell_y]
+
+
+class RewardNavStr:
+    "Reward for training robot to go straight"
+
+    def __init__(self, param, env) -> None:
+        
+        self._time_limit = param['time_limit']
+        self.prev_state = None
+        self.env = env
+
+    def reward(self, _agent_id, _state):
+        if self.prev_state is None:
+            self.prev_state = self.env._scenario.world.state()[self.env._scenario.agent.id]
+
+        reward = -1
+
+        state = _state[_agent_id]
+
+        x,y = state['pose'][:2]
+        prev_x, prev_y = self.prev_state['pose'][:2]
+
+        current_cell = self.pos2cell(x,y)
+        prev_cell = self.pos2cell(prev_x, prev_y)
+
+        if (len(self.env.path) and current_cell == self.env.path[0]) or not len(self.env.path):
+            reward += 20
+        elif len(self.env.path) and prev_cell != current_cell and \
+            np.linalg.norm([prev_cell, self.env.path[0]]) > np.linalg.norm([current_cell, self.env.path[0]]):
+            reward = 10
+        elif len(self.env.path) and prev_cell != current_cell and \
+            np.linalg.norm([prev_cell, self.env.path[0]]) < np.linalg.norm([current_cell, self.env.path[0]]):
+            reward = -10
+        else:
+            laserRanges = self.env.get_laserranges()
+            for r in laserRanges:
+                if r < 0.19 and r > 0.14:                           
+                    reward = -10
+                    break
+            
+        return reward
+
+    def done(self, _agent_id, _state):
+        if self.prev_state is None:
+            self.prev_state = self.env._scenario.world.state()[self.env._scenario.agent.id]
+
+        done = False
+
+        state = _state[_agent_id]
+        x,y = state['pose'][:2]
+        current_cell = self.pos2cell(x,y)
+
+        prev_x, prev_y = self.prev_state['pose'][:2]
+        prev_cell = self.pos2cell(prev_x, prev_y)
+
+        self.prev_state = state
+
+        if current_cell == self.env.path[0]:
+            done = True
+        elif prev_cell != current_cell and \
+            np.linalg.norm([prev_cell, self.env.path[0]]) < np.linalg.norm([current_cell, self.env.path[0]]):
+            done = True
+            # print("went to the wrong cell")
+        else:
+        
+            laserRanges = self.env.get_laserranges()
+            for r in laserRanges:
+                if r < 0.19 and r > 0.14:                           
+                    done = True
                     # print(f'crashed {r=}')
                     break
 

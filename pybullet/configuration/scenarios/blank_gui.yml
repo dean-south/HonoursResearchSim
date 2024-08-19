@@ -18,7 +18,7 @@ agents:
     name: iRobot
     sensors: [ laser]
   task:
-    task_name: reward_straight_navigation
+    task_name: carry_on
     params: { time_limit: -1, goal_size_detection: 0.}
   starting_position: [-7.5,-7.5, 0.0]
   starting_orientation: [ 0.0, 0.0, 1.571]

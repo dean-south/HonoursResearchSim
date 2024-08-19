@@ -294,6 +294,7 @@ class RewardCarryOn:
         self._time_limit = param['time_limit']
         self.prev_state = None
         self.env = env
+        self.reset_pose = False
 
     def reward(self, _agent_id, _state):
         if self.prev_state is None:
@@ -324,6 +325,56 @@ class RewardCarryOn:
                     reward = -10
                     break
 
+    def done(self, _agent_id, _state):
+        if self.prev_state is None:
+            self.prev_state = self.env._scenario.world.state()[self.env._scenario.agent.id]
+
+        done = False
+
+        state = _state[_agent_id]
+        x,y = state['pose'][:2]
+        current_cell = self.pos2cell(x,y)
+
+        prev_x, prev_y = self.prev_state['pose'][:2]
+        prev_cell = self.pos2cell(prev_x, prev_y)
+
+        if current_cell == self.env.path[0]:
+            done = True
+        elif prev_cell != current_cell and \
+            np.linalg.norm([prev_cell, self.env.path[0]]) < np.linalg.norm([current_cell, self.env.path[0]]):
+            done = True
+            self.reset_pose = True
+            # print("went to the wrong cell")
+        else:
+        
+            laserRanges = self.env.get_laserranges()
+            for r in laserRanges:
+                if r < 0.19 and r > 0.14:                           
+                    done = True
+                    self.reset_pose
+                    # print(f'crashed {r=}')
+                    break
+
+
+        return done
+    
+    def reset(self):
+        self.prev_state = None
+
+    def pos2cell(self, x, y):
+
+        cell_x = 0
+        cell_y = 0
+
+        for i in range(16):
+            if x >= -8 + i and x < -8 + (i+1):
+                cell_x = i
+
+            if y >= -8 + i and y < -8 + (i+1):
+                cell_y = i
+
+        return [cell_x, cell_y]
+
 
 class RewardNavStr:
     "Reward for training robot to go straight"
@@ -333,7 +384,6 @@ class RewardNavStr:
         self._time_limit = param['time_limit']
         self.prev_state = None
         self.env = env
-        self.reset_pose = False
 
     def reward(self, _agent_id, _state):
         if self.prev_state is None:
@@ -388,7 +438,6 @@ class RewardNavStr:
         elif prev_cell != current_cell and \
             np.linalg.norm([prev_cell, self.env.path[0]]) < np.linalg.norm([current_cell, self.env.path[0]]):
             done = True
-            self.reset_pose = True
             # print("went to the wrong cell")
         else:
         
@@ -396,7 +445,6 @@ class RewardNavStr:
             for r in laserRanges:
                 if r < 0.19 and r > 0.14:                           
                     done = True
-                    self.reset_pose
                     # print(f'crashed {r=}')
                     break
 

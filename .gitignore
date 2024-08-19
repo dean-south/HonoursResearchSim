@@ -14,7 +14,6 @@ pybullet/_pycache
 /pybullet/iRobot_gym/__pycache__
 /pybullet/iRobot_gym/bullet/__pycache__
 /pybullet/iRobot_gym/envs/__pycache__
-/wandb
 pybullet/controllers/__pycache__
 pybullet/iRobot_gym/__pycache__
 pybullet/iRobot_gym/bullet/__pycache__
@@ -25,3 +24,4 @@ runs/umsplbfr/TD3_1/events.out.tfevents.1723653522.mscluster5.ms.wits.ac.za.4722
 runs/23brdm04/TD3_1/events.out.tfevents.1723652975.mscluster4.ms.wits.ac.za.50360.0
 runs/qxe94cv3/TD3_1/events.out.tfevents.1723653874.mscluster28.ms.wits.ac.za.57718.0
 runs/umsplbfr/TD3_1/events.out.tfevents.1723653522.mscluster5.ms.wits.ac.za.47224.0
+/wandb

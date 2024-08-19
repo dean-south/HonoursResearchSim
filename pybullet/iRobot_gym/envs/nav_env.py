@@ -204,11 +204,15 @@ class SimpleNavEnv(gym.Env):
             self._RewardFunction = False
             return self.random_start_pose()
         
-        state = self._scenario.world.state()[self._scenario.agent.id] 
+        if self._RewardFunction.prev_state is None:
+            return self.random_start_pose()
+        else:
+            
+            state = self._RewardFunction.prev_state
 
-        pos = state['pose'][:3]
+            pos = state['pose'][:3]
 
-        orientation = p.getQuaternionFromEuler(state['pose'][3:])
+            orientation = p.getQuaternionFromEuler(state['pose'][3:])
 
         return [pos, orientation]
     
@@ -338,12 +342,13 @@ class RewardCarryOn:
         prev_x, prev_y = self.prev_state['pose'][:2]
         prev_cell = self.pos2cell(prev_x, prev_y)
 
+        self.prev_state = state
+
         if current_cell == self.env.path[0]:
             done = True
         elif prev_cell != current_cell and \
             np.linalg.norm([prev_cell, self.env.path[0]]) < np.linalg.norm([current_cell, self.env.path[0]]):
             done = True
-            self.reset_pose = True
             # print("went to the wrong cell")
         else:
         
@@ -351,7 +356,6 @@ class RewardCarryOn:
             for r in laserRanges:
                 if r < 0.19 and r > 0.14:                           
                     done = True
-                    self.reset_pose
                     # print(f'crashed {r=}')
                     break
 
@@ -360,6 +364,13 @@ class RewardCarryOn:
     
     def reset(self):
         self.prev_state = None
+
+    def get_prev_state(self):
+        if self.prev_state is None:
+            self.prev_state = self.env._scenario.world.state()[self.env._scenario.agent.id]
+        
+        return self.prev_state
+
 
     def pos2cell(self, x, y):
 
@@ -413,11 +424,7 @@ class RewardNavStr:
                 if r < 0.19 and r > 0.14:                           
                     reward = -10
                     break
-           
-
-
-        self.prev_state = state
- 
+            
         return reward
 
     def done(self, _agent_id, _state):
@@ -432,6 +439,8 @@ class RewardNavStr:
 
         prev_x, prev_y = self.prev_state['pose'][:2]
         prev_cell = self.pos2cell(prev_x, prev_y)
+
+        self.prev_state = state
 
         if current_cell == self.env.path[0]:
             done = True

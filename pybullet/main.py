@@ -50,7 +50,7 @@ class SimEnv():
         self._model_name = args.model_name
         self._i = -1
         self._liste_position = []
-        self._env.reset()
+        # self._env.reset()
         self.train = args.train
         self.test_mode = args.test_mode
         
@@ -94,7 +94,8 @@ class SimEnv():
                 tensorboard_log=f"runs/{self.run.id}",
                 tau=0.005,
                 batch_size=256,
-                policy_delay=10)
+                policy_delay=10,
+                gamma=0.95)
 
         else:
             print("\nNo controller named", self._ctr)
@@ -185,15 +186,6 @@ class SimEnv():
 
         kill_sim = False
 
-        self.model.learn(total_timesteps=10000000, log_interval=10, 
-                callback=WandbCallback(
-                    gradient_save_freq=1000,
-                    model_save_path=f"models/{self.run.id}",
-                    verbose=2,
-                ),
-            )
-        self.run.finish()
-
         for e in range(self._episodes):
             self._done = 0
             score = 0
@@ -222,7 +214,7 @@ class SimEnv():
                         self._controller.reset()
                     elif self._ctr == 'sb3':
 
-                        if args.test_model is None:
+                        if args.load_model is None:
                             self.model.learn(total_timesteps=10000000, log_interval=10, 
                                     callback=WandbCallback(
                                         gradient_save_freq=1000,

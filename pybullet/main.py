@@ -10,9 +10,13 @@ import random
 import matplotlib.pyplot as plt
 import pandas as pd
 import wandb
+import torch as th
+import torch.nn as nn
 from wandb.integration.sb3 import WandbCallback
 from stable_baselines3 import TD3
 from stable_baselines3.common.noise import NormalActionNoise, OrnsteinUhlenbeckActionNoise
+from stable_baselines3.td3.policies import TD3Policy
+from stable_baselines3.common.torch_layers import create_mlp
 from math import sin, cos, pi
 
 from iRobot_gym.envs import SimpleNavEnv
@@ -80,11 +84,24 @@ class SimEnv():
             "env_name": "Blank-v0",
             }
             self.run = wandb.init(
-            project="Honours Research",
+            project="Carry On",
             config=config,
             sync_tensorboard=True,  # auto-upload sb3's tensorboard metrics
             save_code=True,  # optional
             )
+
+            class CustomTD3Policy(TD3Policy):
+                def make_actor(self, features_extractor: nn.Module) -> nn.Module:
+                    actor_net = create_mlp(
+                        features_extractor.features_dim,
+                        self.action_space.shape[0],
+                        self.net_arch['pi'],
+                        activation_fn=nn.ReLU,
+                        squash_output=False,
+            )
+                    # Add tanh activation to the final layer
+                    actor_net.append(nn.Tanh())
+                    return nn.Sequential(*actor_net)
 
             self.model = TD3(
                 "MlpPolicy",
@@ -95,7 +112,8 @@ class SimEnv():
                 tau=0.005,
                 batch_size=256,
                 policy_delay=10,
-                gamma=0.95)
+                gamma=0.95,
+                policy_kwargs=dict(policy_class=CustomTD3Policy))
 
         else:
             print("\nNo controller named", self._ctr)

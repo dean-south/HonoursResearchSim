@@ -4,7 +4,7 @@ actuators:
   - type: motor
     name: motor
     params:
-      velocity_multiplier: 100 #0.5m/s
+      velocity_multiplier: 10 #0.5m/s
       max_force: 20
 
 sensors:

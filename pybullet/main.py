@@ -14,9 +14,9 @@ import torch as th
 import torch.nn as nn
 from wandb.integration.sb3 import WandbCallback
 from stable_baselines3 import TD3
-from stable_baselines3.common.noise import NormalActionNoise, OrnsteinUhlenbeckActionNoise
-from stable_baselines3.td3.policies import TD3Policy
-from stable_baselines3.common.torch_layers import create_mlp
+from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
+from stable_baselines3.common.noise import NormalActionNoise
+from stable_baselines3.td3.policies import MlpPolicy
 from math import sin, cos, pi
 
 from iRobot_gym.envs import SimpleNavEnv
@@ -84,36 +84,59 @@ class SimEnv():
             "env_name": "Blank-v0",
             }
             self.run = wandb.init(
-            project="Carry On",
+            project="Go slow",
             config=config,
             sync_tensorboard=True,  # auto-upload sb3's tensorboard metrics
             save_code=True,  # optional
             )
 
-            class CustomTD3Policy(TD3Policy):
-                def make_actor(self, features_extractor: nn.Module) -> nn.Module:
-                    actor_net = create_mlp(
-                        features_extractor.features_dim,
-                        self.action_space.shape[0],
-                        self.net_arch['pi'],
-                        activation_fn=nn.ReLU,
-                        squash_output=False,
-            )
-                    # Add tanh activation to the final layer
-                    actor_net.append(nn.Tanh())
-                    return nn.Sequential(*actor_net)
+            class CustomMlpPolicy(MlpPolicy):
+                def _build_mlp_extractor(self):
+                    super()._build_mlp_extractor()
+                    
+                    # Modify the actor network
+                    last_layer_size = self.actor.latent_pi.shape[1]
+                    self.actor.mu = th.nn.Sequential(
+                        th.nn.Linear(last_layer_size, self.action_space.shape[0]),
+                        th.nn.Tanh()  # Add Tanh activation function
+                    )
+            
+            def linear_schedule(initial_value):
+                """
+                Linear learning rate schedule.
+
+                :param initial_value: Initial learning rate.
+                :return: schedule that computes
+                the current learning rate depending on remaining progress
+                (starts with initial_value and decreases to 0).
+                """
+                def schedule(progress_remaining):
+                    return progress_remaining * initial_value
+                return schedule
+            
+            def exponential_schedule(initial_value, decay_rate=0.99):
+                def schedule(progress_remaining):
+                    return initial_value * (decay_rate ** (1 - progress_remaining))
+                return schedule
+
+            initial_learning_rate = 0.001
+
 
             self.model = TD3(
-                "MlpPolicy",
+                CustomMlpPolicy ,
                 self._env, 
                 action_noise=action_noise, 
                 verbose=1, 
-                tensorboard_log=f"runs/{self.run.id}",
+                tensorboard_log=f"runs/{args.model_name}",
                 tau=0.005,
                 batch_size=256,
                 policy_delay=10,
                 gamma=0.95,
-                policy_kwargs=dict(policy_class=CustomTD3Policy))
+                learning_rate=exponential_schedule(initial_learning_rate)
+                ,)
+            
+            if args.load_model is not None:
+                self.model.set_parameters(f'./models/{args.load_model}/model.zip')
 
         else:
             print("\nNo controller named", self._ctr)
@@ -204,13 +227,14 @@ class SimEnv():
 
         kill_sim = False
 
-        for e in range(self._episodes):
+        for e in range(self._episodes if self.test_mode else 1):
             self._done = 0
             score = 0
             self._i = -1
             state = self._env.reset()         
 
-            print(f'Starting Episode {e}')
+            if self.test_mode:
+                print(f'Starting Episode {e}, starting cell: {self.pose_to_cell(state[:2]*16-8)}, goal cell: {self._env.path}, ')
 
             while not self._done:
 
@@ -232,19 +256,20 @@ class SimEnv():
                         self._controller.reset()
                     elif self._ctr == 'sb3':
 
-                        if args.load_model is None:
+                        if not self.test_mode:
                             self.model.learn(total_timesteps=10000000, log_interval=10, 
                                     callback=WandbCallback(
-                                        gradient_save_freq=1000,
-                                        model_save_path=f"models/{self.run.id}",
+                                        gradient_save_freq=500,
+                                        model_save_path=f"models/{self._model_name}",
                                         verbose=2,
                                     ),
                                 )
                             self.run.finish()
                         else:
-                            self.model.set_parameters(f'./models/{args.test_model}')
+                            # print(state[:6])
+                            action, _ = self.model.predict(state)
 
-                            action = self.model.predict(state)
+                            # print(f'{action=} {action[0]=}')
 
                             state, rew, self._done, info = self._movement(action)
 
@@ -258,13 +283,13 @@ class SimEnv():
             if kill_sim:
                 break
             
-            score_history.append(score)
-            avg_score = np.mean(score_history[-100:])
-            avg_score_history.append(avg_score)
-            avg_reward_history.append(score/self._i)
+            # score_history.append(score)
+            # avg_score = np.mean(score_history[-100:])
+            # avg_score_history.append(avg_score)
+            # avg_reward_history.append(score/self._i)
 
-            self.save_scores(score_history, avg_score_history, avg_reward_history)
-            self.create_graph()
+            # self.save_scores(score_history, avg_score_history, avg_reward_history)
+            # self.create_graph()
 
             # if avg_score > best_score and self._ctr == "RL":
             #     best_score = avg_score
@@ -366,7 +391,7 @@ if __name__ == "__main__":
                         help='verbose for controller: True or False')
     parser.add_argument('--file_name', type=str,
                         default='NoveltyFitness/9/maze_nsfit9-gen38-p0', help='file name of the invidual to load if ctr=novelty')
-    parser.add_argument('--episodes', type=int, default=1,
+    parser.add_argument('--episodes', type=int, default=1000,
                         help='how many training episodes')
     parser.add_argument('--model_name', type=str, default='model',
                         help='name of the model being trained')

@@ -71,7 +71,8 @@ class SimpleNavEnv(gym.Env):
         if current_cell == self.path[0]:
             self.path.pop(0)
        
-        self._time = self._scenario.world.update(
+        self._time +=1
+        self._scenario.world.update(
             agent_id=self._scenario.agent.id)
         self.update_camera()
 
@@ -205,7 +206,7 @@ class SimpleNavEnv(gym.Env):
             self._RewardFunction.reset_pose = False
             return self.random_start_pose()
         
-        if self._RewardFunction.prev_state is None:
+        if self._RewardFunction.prev_state is None:   
             # print('cunt')
             return self.random_start_pose()
         else:
@@ -219,7 +220,9 @@ class SimpleNavEnv(gym.Env):
         return [pos, orientation]
     
     def get_carry_on_path(self):
-        curr_cell = self.get_start_cell()
+
+        state = self._scenario.world.state()[self._scenario.agent.id] 
+        curr_cell = self.pos2cell(*state['pose'][:2])
 
         cell_path = []
 
@@ -356,6 +359,9 @@ class RewardCarryOn:
             self.reset_pose = True
 
             # print("went to the wrong cell")
+        elif self.env._time % self._time_limit == 0:
+            self.reset_pose = True
+            done = True
         else:
         
             laserRanges = self.env.get_laserranges()
@@ -455,6 +461,7 @@ class RewardNavStr:
             np.linalg.norm([prev_cell, self.env.path[0]]) < np.linalg.norm([current_cell, self.env.path[0]]):
             done = True
             # print("went to the wrong cell")
+
         else:
         
             laserRanges = self.env.get_laserranges()

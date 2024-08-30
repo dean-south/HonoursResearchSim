@@ -15,7 +15,7 @@ class SimpleNavEnv(gym.Env):
         super().__init__()
         self._scenario = scenario
         self._initialized = False
-        self._time = 0.0
+        self._time = 1
         self.render_mode = render_mode
 
         self.action_space = spaces.Box(low=-1, high=1, shape=(2,), dtype=float)
@@ -59,9 +59,9 @@ class SimpleNavEnv(gym.Env):
         return self._scenario
 
     def step(self, action):
-        state = self._scenario.world.state()
         # self.observation, _ = self._scenario.agent.step(action=action)
         self._scenario.agent.step(action=action)
+        state = self._scenario.world.state()
         self.observation = self.get_world_observation()
 
         reward = self._RewardFunction.reward(self._scenario.agent.id, state)
@@ -83,15 +83,19 @@ class SimpleNavEnv(gym.Env):
         if not self._initialized:
             self._scenario.world.init()
             self._initialized = True
+            self._scenario.agent.reset(self.random_start_pose())
         else:
             self._scenario.world.reset()
+            self._scenario.agent.reset(self.get_start_pose())
         # obs = self._scenario.agent.reset(
         #     self._scenario.world._get_starting_position(self._scenario.agent))
-        self._scenario.agent.reset(self.get_start_pose())
+        
         self._scenario.world.update(agent_id=self._scenario.agent.id)
         self._RewardFunction.reset()
 
         self.path = self.get_path()
+
+        self._time = 1
 
 
         
@@ -206,12 +210,12 @@ class SimpleNavEnv(gym.Env):
             self._RewardFunction.reset_pose = False
             return self.random_start_pose()
         
-        if self._RewardFunction.prev_state is None:   
-            # print('cunt')
-            return self.random_start_pose()
+        # if self._RewardFunction.prev_state is None:   
+        #     # print('cunt')
+        #     return self.random_start_pose()
         else:
             
-            state = self._RewardFunction.prev_state
+            state = self._scenario.world.state()[self._scenario.agent.id]
 
             pos = state['pose'][:3]
 
@@ -301,32 +305,28 @@ class RewardCarryOn:
     def __init__(self, param, env) -> None:
         
         self._time_limit = param['time_limit']
-        self.prev_state = None
         self.env = env
         self.reset_pose = False
 
     def reward(self, _agent_id, _state):
-        if self.prev_state is None:
-            self.prev_state = self.env._scenario.world.state()[self.env._scenario.agent.id]
-
-        reward = -1
-
         state = _state[_agent_id]
 
         x,y = state['pose'][:2]
-        prev_x, prev_y = self.prev_state['pose'][:2]
 
         current_cell = self.pos2cell(x,y)
-        prev_cell = self.pos2cell(prev_x, prev_y)
+
+        reward = -np.linalg.norm([current_cell, self.env.path[0]])
 
         if (len(self.env.path) and current_cell == self.env.path[0]) or not len(self.env.path):
-            reward += 20
-        elif len(self.env.path) and prev_cell != current_cell and \
-            np.linalg.norm([prev_cell, self.env.path[0]]) > np.linalg.norm([current_cell, self.env.path[0]]):
-            reward = 10
-        elif len(self.env.path) and prev_cell != current_cell and \
-            np.linalg.norm([prev_cell, self.env.path[0]]) < np.linalg.norm([current_cell, self.env.path[0]]):
-            reward = -10
+            reward = 20
+        # elif len(self.env.path) and prev_cell != current_cell and \
+        #     np.linalg.norm([prev_cell, self.env.path[0]]) > np.linalg.norm([current_cell, self.env.path[0]]):
+            
+        #     reward = 10
+        # elif len(self.env.path) and prev_cell != current_cell and \
+        #     np.linalg.norm([prev_cell, self.env.path[0]]) < np.linalg.norm([current_cell, self.env.path[0]]):
+
+        #     reward = -10
         else:
             laserRanges = self.env.get_laserranges()
             for r in laserRanges:
@@ -337,33 +337,25 @@ class RewardCarryOn:
         return reward
 
     def done(self, _agent_id, _state):
-        if self.prev_state is None:
-            self.prev_state = self.env._scenario.world.state()[self.env._scenario.agent.id]
-
         done = False
 
         state = _state[_agent_id]
         x,y = state['pose'][:2]
         current_cell = self.pos2cell(x,y)
 
-        prev_x, prev_y = self.prev_state['pose'][:2]
-        prev_cell = self.pos2cell(prev_x, prev_y)
-
-        self.prev_state = state
-
         if current_cell == self.env.path[0]:
             done = True
-        elif prev_cell != current_cell and \
-            np.linalg.norm([prev_cell, self.env.path[0]]) < np.linalg.norm([current_cell, self.env.path[0]]):
-            done = True
-            self.reset_pose = True
+        # elif prev_cell != current_cell and \
+        #     np.linalg.norm([prev_cell, self.env.path[0]]) < np.linalg.norm([current_cell, self.env.path[0]]):
+        #     done = True
+        #     self.reset_pose = True
 
-            # print("went to the wrong cell")
+        #     # print("went to the wrong cell")
         elif self.env._time % self._time_limit == 0:
             self.reset_pose = True
             done = True
+            # print('time ran out')
         else:
-        
             laserRanges = self.env.get_laserranges()
             for r in laserRanges:
                 if r < 0.19 and r > 0.14:                           
@@ -376,13 +368,8 @@ class RewardCarryOn:
         return done
     
     def reset(self):
-        self.prev_state = None
-
-    def get_prev_state(self):
-        if self.prev_state is None:
-            self.prev_state = self.env._scenario.world.state()[self.env._scenario.agent.id]
-        
-        return self.prev_state
+        # self.prev_state = self.env._scenario.world.state()[self.env._scenario.agent.id]
+        pass
 
 
     def pos2cell(self, x, y):
@@ -460,7 +447,7 @@ class RewardNavStr:
         elif prev_cell != current_cell and \
             np.linalg.norm([prev_cell, self.env.path[0]]) < np.linalg.norm([current_cell, self.env.path[0]]):
             done = True
-            # print("went to the wrong cell")
+            print("went to the wrong cell")
 
         else:
         

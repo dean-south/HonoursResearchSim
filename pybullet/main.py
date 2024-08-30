@@ -78,17 +78,19 @@ class SimEnv():
             n_actions = self._env.action_space.shape[-1]
             action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=0.1 * np.ones(n_actions))
 
-            config = {
-            "policy_type": "MlpPolicy",
-            "total_timesteps": 10000000,
-            "env_name": "Blank-v0",
-            }
-            self.run = wandb.init(
-            project="Go slow",
-            config=config,
-            sync_tensorboard=True,  # auto-upload sb3's tensorboard metrics
-            save_code=True,  # optional
-            )
+            if not self.test_mode:
+                config = {
+                    "policy_type": "MlpPolicy",
+                    "total_timesteps": 10000000,
+                    "env_name": "Blank-v0",
+                }
+
+                self.run = wandb.init(
+                    project="Go slow",
+                    config=config,
+                    sync_tensorboard=True,  # auto-upload sb3's tensorboard metrics
+                    save_code=True,  # optional
+                )
 
             class CustomMlpPolicy(MlpPolicy):
                 def _build_mlp_extractor(self):
@@ -268,6 +270,8 @@ class SimEnv():
                         else:
                             # print(state[:6])
                             action, _ = self.model.predict(state)
+
+                            # action = [1,1]
 
                             # print(f'{action=} {action[0]=}')
 

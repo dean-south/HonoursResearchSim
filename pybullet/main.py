@@ -83,7 +83,7 @@ class SimEnv():
             if not self.test_mode:
                 config = {
                     "policy_type": "MlpPolicy",
-                    "total_timesteps": 10000000,
+                    "total_timesteps": 1000000,
                     "env_name": "Blank-v0",
                 }
 
@@ -258,10 +258,10 @@ class SimEnv():
                     elif self._ctr == 'sb3':
 
                         if not self.test_mode:
-                            self.model.learn(total_timesteps=10000000, log_interval=10, 
+                            self.model.learn(total_timesteps=1000000, log_interval=10, 
                                     callback=WandbCallback(
                                         gradient_save_freq=50,
-                                        model_save_path=f"models/{self.run.id}",
+                                        model_save_path=f"models/{args.model_name}",
                                         verbose=2,
                                     ),
                                 )

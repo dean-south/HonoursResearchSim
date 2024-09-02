@@ -12,7 +12,7 @@ import pandas as pd
 import wandb
 import torch as th
 from wandb.integration.sb3 import WandbCallback
-from stable_baselines3 import TD3
+from stable_baselines3 import TD3, HerReplayBuffer
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 from stable_baselines3.common.noise import NormalActionNoise
 from stable_baselines3.td3.policies import MlpPolicy
@@ -136,8 +136,8 @@ class SimEnv():
                 batch_size=256,
                 policy_delay=10,
                 gamma=0.95,
-                learning_rate=exponential_schedule(initial_learning_rate, decay_rate=0.5)
-                ,)
+                learning_rate=exponential_schedule(initial_learning_rate, decay_rate=0.5),
+                )
 
         else:
             print("\nNo controller named", self._ctr)
@@ -260,8 +260,8 @@ class SimEnv():
                         if not self.test_mode:
                             self.model.learn(total_timesteps=10000000, log_interval=10, 
                                     callback=WandbCallback(
-                                        gradient_save_freq=1000,
-                                        model_save_path=f"models/{args.model_name}",
+                                        gradient_save_freq=50,
+                                        model_save_path=f"models/{self.run.id}",
                                         verbose=2,
                                     ),
                                 )

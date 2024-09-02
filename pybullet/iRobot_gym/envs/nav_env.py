@@ -235,7 +235,7 @@ class SimpleNavEnv(gym.Env):
         d_x = int(sin(direction * pi/2))
         d_y = int(cos(direction * pi/2))
 
-        dist = random.randint(1,15)
+        dist = random.randint(1,5)
 
         des_cell = [int(curr_cell[0] + d_x*dist), int(curr_cell[1] + d_y*dist)]
 
@@ -276,14 +276,15 @@ class SimpleNavEnv(gym.Env):
 
     @staticmethod
     def normalise_v(v_x,v_y):
-        v_x = (v_x + 100)/(200)
-        v_y = (v_y + 100)/(200)
+        # v_x = (v_x + 100)/(200)
+        # v_y = (v_y + 100)/(200)
 
         return [v_x, v_y]
 
     @staticmethod
     def normalise_v_theta(v_theta):
-        return (v_theta + 25)/(50)
+        # return (v_theta + 25)/(50)
+        return v_theta
 
     @staticmethod
     def pos2cell(x, y):

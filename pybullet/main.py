@@ -83,7 +83,7 @@ class SimEnv():
             if not self.test_mode:
                 config = {
                     "policy_type": "MlpPolicy",
-                    "total_timesteps": 1000000,
+                    "total_timesteps": 10000000,
                     "env_name": "Blank-v0",
                 }
 
@@ -170,58 +170,10 @@ class SimEnv():
 
         return [cell_x, cell_y]
     
-    def create_str_path(self, start_cell):
-        
-        cell_path = []
-        curr_cell = start_cell
-
-        for i in range(10):
-
-            direction = random.randint(0,3)
-
-            d_x = int(sin(direction * pi/2))
-            d_y = int(cos(direction * pi/2))
-
-            dist = random.randint(1,15)
-
-            des_cell = [int(curr_cell[0] + d_x*dist), int(curr_cell[1] + d_y*dist)]
-
-            if des_cell[0] < 0:
-                des_cell[0] = 0
-            elif des_cell[1] < 0:
-                des_cell[1] = 0
-            elif des_cell[0] > 15:
-                des_cell[0] = 15
-            elif des_cell[1] > 15:
-                des_cell[1] = 15
-
-            cell_path.append(des_cell)
-
-            curr_cell = des_cell
-
-        return cell_path
-
-    def random_start_pose(self):
-
-        cell_x = random.randint(0,15)
-        cell_y = random.randint(0,15)
-
-        start_pos = [i for i in range(-8,8,1)]
-        directions = [[0,0,1,1], [0,0,0,1], [0,0,-1,1], [0,0,0,-1]]
-
-        start_x = start_pos[cell_x] + random.uniform(0.168, 0.832)
-        start_y = start_pos[cell_y] + random.uniform(0.168, 0.832)
-
-        d = random.randint(0,3)
-        orientation = directions[d]
-
-        return [start_x, start_y, 0], orientation
-
-    
     def start(self):
         """Forward the simulation until its complete."""  
 
-        best_score = -1000000
+        best_score = -10000000
         score_history = []
         avg_score_history = []
         avg_reward_history = []
@@ -258,7 +210,7 @@ class SimEnv():
                     elif self._ctr == 'sb3':
 
                         if not self.test_mode:
-                            self.model.learn(total_timesteps=1000000, log_interval=10, 
+                            self.model.learn(total_timesteps=10000000, log_interval=10, 
                                     callback=WandbCallback(
                                         gradient_save_freq=50,
                                         model_save_path=f"models/{args.model_name}",

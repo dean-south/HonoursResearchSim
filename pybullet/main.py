@@ -155,12 +155,12 @@ class SimEnv():
                         save_code=True,  # optional
                     )
                 
-                self.model = PPO(
-                    'MlpPolicy', # CustomMlpPolicy,
-                    self._env,
-                    verbose=1,
-                    tensorboard_log=f"runs/{args.model_name}"
-                )
+            self.model = PPO(
+                'MlpPolicy', # CustomMlpPolicy,
+                self._env,
+                verbose=1,
+                tensorboard_log=f"runs/{args.model_name}"
+            )
         
         elif self._ctr == 'sac':
             if not self.test_mode:
@@ -177,12 +177,12 @@ class SimEnv():
                         save_code=True,  # optional
                     )
                 
-                self.model = SAC(
-                    'MlpPolicy', # CustomMlpPolicy,
-                    self._env,
-                    verbose=1,
-                    tensorboard_log=f"runs/{args.model_name}"
-                )
+            self.model = SAC(
+                'MlpPolicy', # CustomMlpPolicy,
+                self._env,
+                verbose=1,
+                tensorboard_log=f"runs/{args.model_name}"
+            )
 
         else:
             print("\nNo controller named", self._ctr)

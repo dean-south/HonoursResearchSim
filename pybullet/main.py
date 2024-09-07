@@ -272,29 +272,11 @@ class SimEnv():
                             # print(f'{action=} {action[0]=}')
 
                             state, rew, self._done, info = self._movement(action)
-                    elif self._ctr == 'ppo':
-                        if not self.test_mode:
-                            self.model.learn(total_timesteps=1000000, log_interval=10, 
-                                    callback=WandbCallback(
-                                        gradient_save_freq=50,
-                                        model_save_path=f"models/{args.model_name}",
-                                        verbose=2,
-                                    ),
-                                )
-                            self.run.finish()
-                        else:
-                            # print(state[:6])
-                            action, _ = self.model.predict(state)
-
-                            # action = [1,1]
-
-                            # print(f'{action=} {action[0]=}')
-
-                            state, rew, self._done, info = self._movement(action)
                     
                     elif self._ctr == 'ppo' or self._ctr == 'sac':
                         if not self.test_mode:
-                            self.model.learn(total_timesteps=1000000, log_interval=10, 
+                            self.model.save(f"models/{args.model_name}")
+                            self.model.learn(total_timesteps=10000000, log_interval=10, 
                                     callback=WandbCallback(
                                         gradient_save_freq=50,
                                         model_save_path=f"models/{args.model_name}",

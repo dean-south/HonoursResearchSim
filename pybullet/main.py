@@ -88,7 +88,7 @@ class SimEnv():
                 os.mkdir(path)
         elif self._ctr == "sb3":
             n_actions = self._env.action_space.shape[-1]
-            action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=0.1 * np.ones(n_actions))
+            action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=0.25 * np.ones(n_actions))
 
             if not self.test_mode:
                 config = {
@@ -136,7 +136,7 @@ class SimEnv():
                 tau=0.005,
                 batch_size=256,
                 policy_delay=10,
-                gamma=0.95,
+                gamma=0.96,
                 learning_rate=exponential_schedule(initial_learning_rate, decay_rate=0.5),
                 )
         elif self._ctr == 'ppo':

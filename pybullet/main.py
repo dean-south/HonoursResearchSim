@@ -12,7 +12,7 @@ import pandas as pd
 import wandb
 import torch as th
 from wandb.integration.sb3 import WandbCallback
-from stable_baselines3 import TD3, HerReplayBuffer
+from stable_baselines3 import TD3, HerReplayBuffer, PPO
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 from stable_baselines3.common.noise import NormalActionNoise
 from stable_baselines3.td3.policies import MlpPolicy
@@ -31,6 +31,16 @@ from controllers.RL_ctr import Agent
 from controllers.blank_ctr import BlankController
 
 
+class CustomMlpPolicy(MlpPolicy):
+                def _build_mlp_extractor(self):
+                    super()._build_mlp_extractor()
+                    
+                    # Modify the actor network
+                    last_layer_size = self.actor.latent_pi.shape[1]
+                    self.actor.mu = th.nn.Sequential(
+                        th.nn.Linear(last_layer_size, self.action_space.shape[0]),
+                        th.nn.Tanh()  # Add Tanh activation function
+                    )
 
 
 class SimEnv():
@@ -94,16 +104,7 @@ class SimEnv():
                     save_code=True,  # optional
                 )
 
-            class CustomMlpPolicy(MlpPolicy):
-                def _build_mlp_extractor(self):
-                    super()._build_mlp_extractor()
-                    
-                    # Modify the actor network
-                    last_layer_size = self.actor.latent_pi.shape[1]
-                    self.actor.mu = th.nn.Sequential(
-                        th.nn.Linear(last_layer_size, self.action_space.shape[0]),
-                        th.nn.Tanh()  # Add Tanh activation function
-                    )
+            
             
             def linear_schedule(initial_value):
                 """
@@ -137,6 +138,27 @@ class SimEnv():
                 policy_delay=10,
                 gamma=0.95,
                 learning_rate=exponential_schedule(initial_learning_rate, decay_rate=0.5),
+                )
+        elif self._ctr == 'ppo':
+
+            if not self.test_mode:
+                config = {
+                    "policy_type": "MlpPolicy",
+                    "total_timesteps": 10000000,
+                    "env_name": "Blank-v0",
+                }
+
+                self.run = wandb.init(
+                        project="PPO Maze",
+                        config=config,
+                        sync_tensorboard=True,  # auto-upload sb3's tensorboard metrics
+                        save_code=True,  # optional
+                    )
+                
+                self.model = PPO(
+                    'MlpPolicy', # CustomMlpPolicy,
+                    self._env,
+                    verbose=1
                 )
 
         else:
@@ -227,7 +249,25 @@ class SimEnv():
                             # print(f'{action=} {action[0]=}')
 
                             state, rew, self._done, info = self._movement(action)
+                    elif self._ctr == 'ppo':
+                        if not self.test_mode:
+                            self.model.learn(total_timesteps=1000000, log_interval=10, 
+                                    callback=WandbCallback(
+                                        gradient_save_freq=50,
+                                        model_save_path=f"models/{args.model_name}",
+                                        verbose=2,
+                                    ),
+                                )
+                            self.run.finish()
+                        else:
+                            # print(state[:6])
+                            action, _ = self.model.predict(state)
 
+                            # action = [1,1]
+
+                            # print(f'{action=} {action[0]=}')
+
+                            state, rew, self._done, info = self._movement(action)
                        
 
                 except KeyboardInterrupt:

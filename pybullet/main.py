@@ -12,7 +12,7 @@ import pandas as pd
 import wandb
 import torch as th
 from wandb.integration.sb3 import WandbCallback
-from stable_baselines3 import TD3, HerReplayBuffer, PPO
+from stable_baselines3 import TD3, HerReplayBuffer, PPO, SAC
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 from stable_baselines3.common.noise import NormalActionNoise
 from stable_baselines3.td3.policies import MlpPolicy
@@ -128,7 +128,7 @@ class SimEnv():
 
 
             self.model = TD3(
-                CustomMlpPolicy ,
+                'MlpPolicy',# CustomMlpPolicy ,
                 self._env, 
                 action_noise=action_noise, 
                 verbose=1, 
@@ -136,7 +136,7 @@ class SimEnv():
                 tau=0.005,
                 batch_size=256,
                 policy_delay=10,
-                gamma=0.96,
+                gamma=0.95,
                 learning_rate=exponential_schedule(initial_learning_rate, decay_rate=0.5),
                 )
         elif self._ctr == 'ppo':
@@ -144,8 +144,8 @@ class SimEnv():
             if not self.test_mode:
                 config = {
                     "policy_type": "MlpPolicy",
-                    "total_timesteps": 10000000,
-                    "env_name": "Blank-v0",
+                    "total_timesteps": 1000000,
+                    "env_name": "Empty-v0",
                 }
 
                 self.run = wandb.init(
@@ -158,7 +158,30 @@ class SimEnv():
                 self.model = PPO(
                     'MlpPolicy', # CustomMlpPolicy,
                     self._env,
-                    verbose=1
+                    verbose=1,
+                    tensorboard_log=f"runs/{args.model_name}"
+                )
+        
+        elif self._ctr == 'sac':
+            if not self.test_mode:
+                config = {
+                    "policy_type": "MlpPolicy",
+                    "total_timesteps": 1000000,
+                    "env_name": "Empty-v0",
+                }
+
+                self.run = wandb.init(
+                        project="SAC Maze",
+                        config=config,
+                        sync_tensorboard=True,  # auto-upload sb3's tensorboard metrics
+                        save_code=True,  # optional
+                    )
+                
+                self.model = SAC(
+                    'MlpPolicy', # CustomMlpPolicy,
+                    self._env,
+                    verbose=1,
+                    tensorboard_log=f"runs/{args.model_name}"
                 )
 
         else:
@@ -250,6 +273,26 @@ class SimEnv():
 
                             state, rew, self._done, info = self._movement(action)
                     elif self._ctr == 'ppo':
+                        if not self.test_mode:
+                            self.model.learn(total_timesteps=1000000, log_interval=10, 
+                                    callback=WandbCallback(
+                                        gradient_save_freq=50,
+                                        model_save_path=f"models/{args.model_name}",
+                                        verbose=2,
+                                    ),
+                                )
+                            self.run.finish()
+                        else:
+                            # print(state[:6])
+                            action, _ = self.model.predict(state)
+
+                            # action = [1,1]
+
+                            # print(f'{action=} {action[0]=}')
+
+                            state, rew, self._done, info = self._movement(action)
+                    
+                    elif self._ctr == 'ppo' or self._ctr == 'sac':
                         if not self.test_mode:
                             self.model.learn(total_timesteps=1000000, log_interval=10, 
                                     callback=WandbCallback(

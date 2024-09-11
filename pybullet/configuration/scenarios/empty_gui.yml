@@ -9,7 +9,7 @@ world:
     GUI: True
     following_camera : False
   goal:
-    goal_position: [0,0,0]
+    goal_position: [8,0,0]
     goal_size : 0.2
   
 agents:

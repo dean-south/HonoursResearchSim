@@ -1,5 +1,5 @@
 import math
-from math import sin, cos, pi
+from math import sin, cos, pi, atan, sqrt
 import gym
 from gym import spaces
 import pybullet as p
@@ -7,6 +7,31 @@ import random
 import numpy as np
 from .scenarios import SimpleNavScenario
 from .camera import CameraController
+
+
+def one_hot_cell(self, cell):
+    cell_x = np.zeros(16)
+    cell_y = np.zeros(16)
+
+    cell_x[cell[0]] = 1
+    cell_y[cell[1]] = 1
+
+    return [*cell_x, *cell_y]
+
+
+def get_pose(path, state):
+
+    cell = path[0]
+
+    pos = state['pose'][:2]
+    theta = state['pose'][-1]
+
+    target = cell + np.array([-7.5,7.5])
+
+    pos_ = np.linalg.norm([pos, target])/(16*sqrt(2))
+    theta_ = atan((target[1] - pos[1])/(target[0] - pos[0])) - theta
+
+    return pos_, theta_
 
 
 class SimpleNavEnv(gym.Env):
@@ -20,7 +45,7 @@ class SimpleNavEnv(gym.Env):
 
         self.action_space = spaces.Box(low=-1, high=1, shape=(2,), dtype=float)
 
-        self.observation_space = spaces.Box(low=0, high=1, shape=(38,), dtype=float)
+        self.observation_space = spaces.Box(low=0, high=1, shape=(15,), dtype=float)
 
         self.path = []
 
@@ -68,8 +93,8 @@ class SimpleNavEnv(gym.Env):
        
         current_cell = self.pos2cell(*state[self._scenario.agent.id]['pose'][:2])
         done = self._RewardFunction.done(self._scenario.agent.id, state)
-        if current_cell == self.path[0]:
-            self.path.pop(0)
+        if sum(current_cell == self.path[0])>1:
+            self.path = np.delete(self.path,0)
        
         self._time +=1
         self._scenario.world.update(
@@ -125,19 +150,15 @@ class SimpleNavEnv(gym.Env):
     def get_world_observation(self):
 
         state = self._scenario.world.state()[self._scenario.agent.id] 
+        laserRanges = self.get_laserranges()[range(0,40,4)]
+
+        pose = get_pose(self.path, state)
         
-        if len(self.path):
-            obs = [*self.normalise_pos(*state['pose'][:2]),
-                    self.normalise_theta(state['pose'][-1]),
-                    *self.normalise_v(*state['velocity'][:2]),
-                    self.normalise_v_theta(state['velocity'][-1]),
-                    *self.one_hot_cell(self.path[0])]
-        else:
-            obs = [*self.normalise_pos(*state['pose'][:2]),
-                    self.normalise_theta(state['pose'][-1]),
-                    *self.normalise_v(*state['velocity'][:2]),
-                    self.normalise_v_theta(state['velocity'][-1]),
-                    *np.zeros(32)]
+        obs = [ pose[0],
+                self.normalise_theta(pose[1]),
+                *self.normalise_v(*state['velocity'][:2]),
+                self.normalise_v_theta(state['velocity'][-1]),
+                *laserRanges/0.5]
 
         return obs
 
@@ -170,7 +191,7 @@ class SimpleNavEnv(gym.Env):
 
             curr_cell = des_cell
 
-        return cell_path
+        return np.array(cell_path)
 
     def get_start_cell(self):
         x,y,z = self._scenario.world._get_starting_position(self._scenario.agent)[0]
@@ -250,16 +271,7 @@ class SimpleNavEnv(gym.Env):
 
         cell_path.append(des_cell)
 
-        return cell_path
-    
-    def one_hot_cell(self, cell):
-        cell_x = np.zeros(16)
-        cell_y = np.zeros(16)
-
-        cell_x[cell[0]] = 1
-        cell_y[cell[1]] = 1
-
-        return [*cell_x, *cell_y]
+        return np.array(cell_path)
     
     @staticmethod
     def normalise_pos(x,y):
@@ -312,14 +324,16 @@ class RewardCarryOn:
     def reward(self, _agent_id, _state):
         state = _state[_agent_id]
 
-        x,y = state['pose'][:2]
+        curr_pos = state['pose'][:2]
 
-        current_cell = self.pos2cell(x,y)
+        des_pos = get_pose(self.env.path, state)[:2]
 
-        reward = -np.linalg.norm([current_cell, self.env.path[0]])
+        current_cell = self.pos2cell(*curr_pos)
 
-        if (len(self.env.path) and current_cell == self.env.path[0]) or not len(self.env.path):
-            reward = 20
+        reward = -np.linalg.norm([curr_pos, des_pos])
+
+        if (len(self.env.path) and sum(current_cell == self.env.path[0])>1) or not len(self.env.path):
+            reward = 50
         # elif len(self.env.path) and prev_cell != current_cell and \
         #     np.linalg.norm([prev_cell, self.env.path[0]]) > np.linalg.norm([current_cell, self.env.path[0]]):
             
@@ -332,7 +346,7 @@ class RewardCarryOn:
             laserRanges = self.env.get_laserranges()
             for r in laserRanges:
                 if r < 0.19 and r > 0.14:                           
-                    reward = -10
+                    reward = -50
                     break
 
         return reward
@@ -344,7 +358,7 @@ class RewardCarryOn:
         x,y = state['pose'][:2]
         current_cell = self.pos2cell(x,y)
 
-        if current_cell == self.env.path[0]:
+        if sum(current_cell == self.env.path[0])>1:
             done = True
         # elif prev_cell != current_cell and \
         #     np.linalg.norm([prev_cell, self.env.path[0]]) < np.linalg.norm([current_cell, self.env.path[0]]):

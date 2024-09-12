@@ -19,6 +19,7 @@ from stable_baselines3.td3.policies import MlpPolicy
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 from stable_baselines3.common.noise import NormalActionNoise
 from stable_baselines3.td3.policies import MlpPolicy
+from stable_baselines3.common.callbacks import CheckpointCallback
 from math import sin, cos, pi
 from sb3_contrib import RecurrentPPO, TQC
 
@@ -150,7 +151,7 @@ class SimEnv():
             if not self.test_mode:
                 config = {
                     "policy_type": "MlpPolicy",
-                    "total_timesteps": 1000000,
+                    "total_timesteps": 10000000,
                     "env_name": "Empty-v0",
                 }
 
@@ -195,7 +196,7 @@ class SimEnv():
             if not self.test_mode:
                 config = {
                     "policy_type": "MlpLstmPolicy",
-                    "total_timesteps": 1000000,
+                    "total_timesteps": 10000000,
                     "env_name": "Empty-v0",
                 }
 
@@ -213,7 +214,7 @@ class SimEnv():
                 'MlpLstmPolicy', # CustomMlpPolicy,
                 self._env,
                 verbose=1,
-                tensorboard_log=f"runs/{self.run.id}",
+                tensorboard_log=f"runs/{self._model_name}",
                 learning_rate=exponential_schedule(initial_learning_rate, decay_rate=0.5),
             )
 
@@ -245,6 +246,7 @@ class SimEnv():
             sys.exit()
 
         if args.load_model is not None and any(self._ctr == ctr for ctr in sb3_models):
+            print("Loading Model")
             self.model.set_parameters(f'models/{args.load_model}/model')
 
     def _movement(self, action):
@@ -336,18 +338,32 @@ class SimEnv():
                     
                     elif self._ctr == 'ppo' or self._ctr == 'sac' or self._ctr == 'recppo' or self._ctr == 'tqc':
                         if not self.test_mode:
-                            self.model.save(f"models/{self._model_name}/model")
+
+                            # Create the wandb callback
+                            wandb_callback = WandbCallback(
+                                gradient_save_freq=10,
+                                model_save_freq=5000,
+                                model_save_path=f"models/{self.run.id}",
+                                verbose=2,
+                            )
+
+                            # Create a checkpoint callback to save the model
+                            checkpoint_callback = CheckpointCallback(
+                                save_freq=10000,  # Save every 10000 steps
+                                save_path=f"./models/{self.run.id}/",
+                                name_prefix="rl_model"
+                            )
+
+
                             self.model.learn(total_timesteps=10000000, log_interval=10, 
-                                    callback=WandbCallback(
-                                        gradient_save_freq=10,
-                                        model_save_path=f"models/{self.run.id}",
-                                        verbose=2,
-                                    ),
+                                    callback=wandb_callback
                                 )
                             self.run.finish()
                         else:
                             # print(state[:6])
                             action, _ = self.model.predict(obs)
+
+                            print(f'{obs=} \n {action=}')
 
                             # action = [1,1]
 
@@ -358,6 +374,8 @@ class SimEnv():
 
                 except KeyboardInterrupt:
                     print(' The simulation was forcibly stopped.')
+                    if not self.test_mode:
+                        self.model.save(f"models/{self.run.id}/model")
                     kill_sim = True
                     break
 

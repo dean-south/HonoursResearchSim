@@ -26,7 +26,7 @@ def get_pose(path, state):
     pos = state['pose'][:2]
     theta = state['pose'][-1]
 
-    target = cell + np.array([-7.5,7.5])
+    target = cell + np.array([-7.5,-7.5])
 
     pos_ = np.linalg.norm([pos, target])/(16*sqrt(2))
     theta_ = atan((target[1] - pos[1])/(target[0] - pos[0])) - theta

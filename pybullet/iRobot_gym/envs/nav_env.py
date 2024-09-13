@@ -144,6 +144,9 @@ class SimpleNavEnv(gym.Env):
     def get_laserranges(self):
         return self._scenario.agent._vehicle.observe()
     
+    def get_pose(self):
+        return self._scenario.world.state()[self._scenario.agent.id]['pose']
+    
     def update_camera(self):
         self.camera_controller.update()
 

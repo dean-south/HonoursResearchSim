@@ -143,7 +143,7 @@ class SimEnv():
                 tau=0.005,
                 batch_size=256,
                 policy_delay=10,
-                gamma=0.95,
+                gamma=0.99,
                 learning_rate=exponential_schedule(initial_learning_rate, decay_rate=0.5),
                 )
         elif self._ctr == 'ppo':
@@ -292,7 +292,7 @@ class SimEnv():
             self._i = -1
             obs = self._env.reset()      
 
-            pose = self._env._scenario.world.state()[self._env._scenario.agent.id]['pose']
+            pose = self._env.get_pose()
 
             if self.test_mode:
                 print(f'Starting Episode {e}, starting cell: {self.pose_to_cell(pose[:2])}, goal cell: {self._env.path}, ')
@@ -318,9 +318,9 @@ class SimEnv():
                     elif self._ctr == 'sb3':
 
                         if not self.test_mode:
-                            self.model.learn(total_timesteps=1000000, log_interval=10, 
+                            self.model.learn(total_timesteps=5000000, log_interval=10, 
                                     callback=WandbCallback(
-                                        gradient_save_freq=50,
+                                        model_save_freq=1000,
                                         model_save_path=f"models/{self._model_name}",
                                         verbose=2,
                                     ),
@@ -355,7 +355,7 @@ class SimEnv():
                             )
 
 
-                            self.model.learn(total_timesteps=10000000, log_interval=10, 
+                            self.model.learn(total_timesteps=5000000, log_interval=10, 
                                     callback=wandb_callback
                                 )
                             self.run.finish()

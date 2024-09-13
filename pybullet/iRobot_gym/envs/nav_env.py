@@ -1,10 +1,12 @@
 import math
-from math import sin, cos, pi, atan, sqrt
+from math import sin, cos, pi, atan, sqrt, acos
 import gym
 from gym import spaces
 import pybullet as p
 import random
 import numpy as np
+from numpy.linalg import norm
+from numpy import dot
 from .scenarios import SimpleNavScenario
 from .camera import CameraController
 
@@ -230,10 +232,6 @@ class SimpleNavEnv(gym.Env):
             # print('poes')
             self._RewardFunction.reset_pose = False
             return self.random_start_pose()
-        
-        # if self._RewardFunction.prev_state is None:   
-        #     # print('cunt')
-        #     return self.random_start_pose()
         else:
             
             state = self._scenario.world.state()[self._scenario.agent.id]
@@ -330,18 +328,18 @@ class RewardCarryOn:
 
         current_cell = self.pos2cell(*curr_pos)
 
-        reward = -np.linalg.norm([curr_pos - des_pos])
+        target = curr_pos - des_pos
 
+        reward = -np.linalg.norm(target)
+
+        v = state['velocity'][:2]
+
+        
         if (len(self.env.path) and sum(current_cell == self.env.path[0])>1) or not len(self.env.path):
             reward = 50
-        # elif len(self.env.path) and prev_cell != current_cell and \
-        #     np.linalg.norm([prev_cell, self.env.path[0]]) > np.linalg.norm([current_cell, self.env.path[0]]):
-            
-        #     reward = 10
-        # elif len(self.env.path) and prev_cell != current_cell and \
-        #     np.linalg.norm([prev_cell, self.env.path[0]]) < np.linalg.norm([current_cell, self.env.path[0]]):
-
-        #     reward = -10
+        elif acos(dot(target,v)/(norm(target)*norm(v))) < pi/4:
+            reward = -1/reward
+        
         else:
             laserRanges = self.env.get_laserranges()
             for r in laserRanges:

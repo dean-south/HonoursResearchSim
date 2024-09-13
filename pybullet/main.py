@@ -318,9 +318,10 @@ class SimEnv():
                     elif self._ctr == 'sb3':
 
                         if not self.test_mode:
-                            self.model.learn(total_timesteps=1000000, log_interval=10, 
+                            self.model.learn(total_timesteps=5000000, log_interval=10, 
                                     callback=WandbCallback(
-                                        gradient_save_freq=50,
+                                        gradient_save_freq=10,
+                                        model_save_freq=5000,
                                         model_save_path=f"models/{self._model_name}",
                                         verbose=2,
                                     ),
@@ -355,7 +356,7 @@ class SimEnv():
                             )
 
 
-                            self.model.learn(total_timesteps=10000000, log_interval=10, 
+                            self.model.learn(total_timesteps=5000000, log_interval=10, 
                                     callback=wandb_callback
                                 )
                             self.run.finish()
@@ -363,7 +364,7 @@ class SimEnv():
                             # print(state[:6])
                             action, _ = self.model.predict(obs)
 
-                            print(f'{obs=} \n {action=}')
+                            # print(f'{obs=} \n {action=}')
 
                             # action = [1,1]
 

@@ -28,7 +28,7 @@ def get_pose(path, state):
 
     target = cell + np.array([-7.5,-7.5])
 
-    pos_ = np.linalg.norm([pos, target])/(16*sqrt(2))
+    pos_ = np.linalg.norm([pos - target])/(16*sqrt(2))
     theta_ = atan((target[1] - pos[1])/(target[0] - pos[0])) - theta
 
     return pos_, theta_
@@ -330,7 +330,7 @@ class RewardCarryOn:
 
         current_cell = self.pos2cell(*curr_pos)
 
-        reward = -np.linalg.norm([curr_pos, des_pos])
+        reward = -np.linalg.norm([curr_pos - des_pos])
 
         if (len(self.env.path) and sum(current_cell == self.env.path[0])>1) or not len(self.env.path):
             reward = 50

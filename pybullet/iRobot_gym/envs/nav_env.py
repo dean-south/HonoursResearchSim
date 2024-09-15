@@ -1,5 +1,5 @@
 import math
-from math import sin, cos, pi, atan, sqrt, acos
+from math import sin, cos, pi, atan, sqrt, acos, asin
 import gym
 from gym import spaces
 import pybullet as p
@@ -31,7 +31,7 @@ def get_pose(path, state):
     target = cell + np.array([-7.5,-7.5])
 
     pos_ = np.linalg.norm([pos - target])/(16*sqrt(2))
-    theta_ = atan((target[1] - pos[1])/(target[0] - pos[0])) - theta
+    theta_ = acos(((target - pos)/norm(target - pos))[0]) - theta
 
     return pos_, theta_
 
@@ -313,6 +313,14 @@ class SimpleNavEnv(gym.Env):
 
         return [cell_x, cell_y]
     
+    def robot_collision(self):
+        laserRanges = self.get_laserranges()
+        for r in laserRanges:
+            if r < 0.19 and r > 0.14:                           
+                return True
+        
+        return False
+    
 class RewardCarryOn:
     "End episode when you reach goal cell. Start next episode immidiately"
 
@@ -327,28 +335,23 @@ class RewardCarryOn:
 
         curr_pos = state['pose'][:2]
 
-        des_pos = get_pose(self.env.path, state)[:2]
+        dist, phi = get_pose(self.env.path, state)
+
+        dist *= 16*sqrt(2)
 
         current_cell = self.pos2cell(*curr_pos)
 
-        target = curr_pos - des_pos
+        reward = -dist   
 
-        reward = -np.linalg.norm(target)
-
-        v = state['velocity'][:2]
-
-        
         if (len(self.env.path) and sum(current_cell == self.env.path[0])>1) or not len(self.env.path):
             reward = 50
-        elif acos(dot(target,v)/(norm(target)*norm(v))) < pi/4:
-            reward = -1/reward
+
+        elif self.env.robot_collision():
+            reward = -50
         
-        else:
-            laserRanges = self.env.get_laserranges()
-            for r in laserRanges:
-                if r < 0.19 and r > 0.14:                           
-                    reward = -50
-                    break
+        elif abs(phi) < pi/6:
+            reward *= abs(phi)
+
 
         return reward
 
@@ -371,14 +374,9 @@ class RewardCarryOn:
             self.reset_pose = True
             done = True
             # print('time ran out')
-        else:
-            laserRanges = self.env.get_laserranges()
-            for r in laserRanges:
-                if r < 0.19 and r > 0.14:                           
-                    done = True
-                    self.reset_pose = True
-                    # print(f'crashed {r=}')
-                    break
+        elif self.env.robot_collision():                        
+            done = True
+            self.reset_pose = True
 
 
         return done

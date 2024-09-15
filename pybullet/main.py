@@ -93,7 +93,7 @@ class SimEnv():
         self.test_mode = args.test_mode
         
 
-        sb3_models = ['td3', "sac", 'ppo', 'recppo', 'tqc']
+        sb3_models = ['sb3', "sac", 'ppo', 'recppo', 'tqc']
 
 
         # initialize controllers
@@ -162,11 +162,14 @@ class SimEnv():
                         save_code=True,  # optional
                     )
                 
+            initial_learning_rate = 0.0003
+                
             self.model = PPO(
                 'MlpPolicy', # CustomMlpPolicy,
                 self._env,
                 verbose=1,
-                tensorboard_log=f"runs/{self._model_name}"
+                tensorboard_log=f"runs/{self._model_name}",
+                learning_rate=exponential_schedule(initial_learning_rate, decay_rate=0.5)
             )
         
         elif self._ctr == 'sac':
@@ -188,7 +191,7 @@ class SimEnv():
                 'MlpPolicy', # CustomMlpPolicy,
                 self._env,
                 verbose=1,
-                tensorboard_log=f"runs/{self.run.id}"
+                tensorboard_log=f"runs/{self._model_name}"
             )
                 
 

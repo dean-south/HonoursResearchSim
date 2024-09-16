@@ -63,6 +63,11 @@ def exponential_schedule(initial_value, decay_rate=0.99):
         return initial_value * (decay_rate ** (1 - progress_remaining))
     return schedule
 
+load_func = {'sb3':TD3.load, 
+            'ppo':PPO.load,
+            'sac':SAC.load,
+            'recppo': RecurrentPPO.load,
+            'tqc':TQC.load}
 
 
 class SimEnv():
@@ -250,7 +255,7 @@ class SimEnv():
 
         if args.load_model is not None and any(self._ctr == ctr for ctr in sb3_models):
             print("Loading Model")
-            self.model.set_parameters(f'models/{args.load_model}/model')
+            self.model = load_func[self._ctr](f'models/{args.load_model}/model',env=self._env, verbose=1)
 
     def _movement(self, action):
     

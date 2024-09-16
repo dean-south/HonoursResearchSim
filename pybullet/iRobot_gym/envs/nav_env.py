@@ -31,9 +31,21 @@ def get_pose(path, state):
     target = cell + np.array([-7.5,-7.5])
 
     pos_ = np.linalg.norm([pos - target])/(16*sqrt(2))
-    theta_ = acos(((target - pos)/norm(target - pos))[0]) - theta
+    theta_ = None
 
-    return pos_, theta_
+    if (pos[0]-target[0] == 0):
+        theta_ = pi/2 if target[1] > pos[1] else -pi/2
+    elif (pos[1]-target[1] == 0):
+        theta_ = 0 if target[0] > pos[0] else pi
+    else:
+        theta_ = atan((pos[1]-target[1])/(pos[0]-target[0]))
+
+        if pos[0] > target[0]:
+            theta_ += pi if pos[1] < target[1] else -pi
+
+    phi = theta_ - theta
+
+    return pos_, phi
 
 
 class SimpleNavEnv(gym.Env):

@@ -27,11 +27,11 @@ def get_pose(path, state):
 
     pos = state['pose'][:2]
     theta = state['pose'][-1]
+    v = state['velocity'][:2]
 
     target = cell + np.array([-7.5,-7.5])
 
     pos_ = np.linalg.norm([pos - target])/(16*sqrt(2))
-    theta_ = None
 
     if (pos[0]-target[0] == 0):
         theta_ = pi/2 if target[1] > pos[1] else -pi/2
@@ -45,7 +45,19 @@ def get_pose(path, state):
 
     phi = theta_ - theta
 
-    return pos_, phi
+    if (v[0] == 0):
+        v_theta = pi/2 if v[1] > 0 else -pi/2
+    elif (v[1] == 0):
+        v_theta = 0 if v[0] > 0 else pi
+    else:
+        v_theta = atan((v[1])/(v[0]))
+
+        if v[0] < 0:
+            v_theta += pi if v[1] > 0 else -pi
+
+    v_phi = theta_ - v_theta
+
+    return pos_, phi, v_phi
 
 
 class SimpleNavEnv(gym.Env):
@@ -347,7 +359,7 @@ class RewardCarryOn:
 
         curr_pos = state['pose'][:2]
 
-        dist, phi = get_pose(self.env.path, state)
+        dist, phi, v_phi = get_pose(self.env.path, state)
 
         dist *= 16*sqrt(2)
 
@@ -361,8 +373,8 @@ class RewardCarryOn:
         elif self.env.robot_collision():
             reward = -50
         
-        elif abs(phi) < pi/6:
-            reward *= abs(phi)
+        elif abs(phi) < pi/6 and abs(v_phi) < pi/6:
+            reward *= abs(phi)*abs(v_phi)
 
 
         return reward

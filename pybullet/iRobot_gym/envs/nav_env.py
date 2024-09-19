@@ -358,14 +358,10 @@ class RewardCarryOn:
         elif self.env.robot_collision():
             reward = -50
         
-        # elif abs(phi) < pi/6 and abs(v_phi) < pi/6:
-        #     reward *= abs(phi)*abs(v_phi)
-        # elif abs(phi) < pi/6 or abs(v_phi) < pi/6:
-        #     reward *= abs(phi) if abs(phi) < pi/6 else 1
-        #     reward *= abs(v_phi) if abs(v_phi) < pi/6 else 1
-
-        elif abs(v_phi) < pi/6:
-            reward *= abs(v_phi)
+        elif abs(phi) < 1:
+            reward *= max(abs(v_phi), 0.05)
+            if abs(v_phi) < 1:
+                reward *= max(abs(phi), 0.05)
 
 
         return reward

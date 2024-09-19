@@ -172,7 +172,7 @@ class SimpleNavEnv(gym.Env):
         
         obs = [ pose[0],
                 self.normalise_theta(pose[1]),
-                self.normalise_v(*state['velocity'][0]),
+                self.normalise_v(state['velocity'][0]),
                 self.normalise_v_theta(state['velocity'][-1]),
                 *laserRanges/0.5]
 

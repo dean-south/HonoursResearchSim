@@ -27,7 +27,6 @@ def get_pose(path, state):
 
     pos = state['pose'][:2]
     theta = state['pose'][-1]
-    v = state['velocity'][:2]
 
     target = cell + np.array([-7.5,-7.5])
 
@@ -45,19 +44,7 @@ def get_pose(path, state):
 
     phi = theta_ - theta
 
-    if (v[0] == 0):
-        v_theta = pi/2 if v[1] > 0 else -pi/2
-    elif (v[1] == 0):
-        v_theta = 0 if v[0] > 0 else pi
-    else:
-        v_theta = atan((v[1])/(v[0]))
-
-        if v[0] < 0:
-            v_theta += pi if v[1] > 0 else -pi
-
-    v_phi = theta_ - v_theta
-
-    return pos_, phi, v_phi
+    return pos_, phi
 
 
 class SimpleNavEnv(gym.Env):
@@ -71,7 +58,7 @@ class SimpleNavEnv(gym.Env):
 
         self.action_space = spaces.Box(low=-1, high=1, shape=(2,), dtype=float)
 
-        self.observation_space = spaces.Box(low=0, high=1, shape=(15,), dtype=float)
+        self.observation_space = spaces.Box(low=0, high=1, shape=(14,), dtype=float)
 
         self.path = []
 
@@ -185,7 +172,7 @@ class SimpleNavEnv(gym.Env):
         
         obs = [ pose[0],
                 self.normalise_theta(pose[1]),
-                *self.normalise_v(*state['velocity'][:2]),
+                *self.normalise_v(*state['velocity'][0]),
                 self.normalise_v_theta(state['velocity'][-1]),
                 *laserRanges/0.5]
 
@@ -312,16 +299,14 @@ class SimpleNavEnv(gym.Env):
         return theta
 
     @staticmethod
-    def normalise_v(v_x,v_y):
-        v_x = (v_x + 100)/(200)
-        v_y = (v_y + 100)/(200)
+    def normalise_v(v_x):
+        v_x = (v_x + 0.7)/(1.4)
 
-        return [v_x, v_y]
+        return v_x
 
     @staticmethod
     def normalise_v_theta(v_theta):
-        return (v_theta + 25)/(50)
-        return v_theta
+        return (v_theta + 5)/(10)
 
     @staticmethod
     def pos2cell(x, y):
@@ -359,7 +344,7 @@ class RewardCarryOn:
 
         curr_pos = state['pose'][:2]
 
-        dist, phi, v_phi = get_pose(self.env.path, state)
+        dist, phi = get_pose(self.env.path, state)
 
         dist *= 16*sqrt(2)
 
@@ -373,8 +358,14 @@ class RewardCarryOn:
         elif self.env.robot_collision():
             reward = -50
         
-        elif abs(phi) < pi/6 and abs(v_phi) < pi/6:
-            reward *= abs(phi)*abs(v_phi)
+        # elif abs(phi) < pi/6 and abs(v_phi) < pi/6:
+        #     reward *= abs(phi)*abs(v_phi)
+        # elif abs(phi) < pi/6 or abs(v_phi) < pi/6:
+        #     reward *= abs(phi) if abs(phi) < pi/6 else 1
+        #     reward *= abs(v_phi) if abs(v_phi) < pi/6 else 1
+
+        elif abs(v_phi) < pi/6:
+            reward *= abs(v_phi)
 
 
         return reward

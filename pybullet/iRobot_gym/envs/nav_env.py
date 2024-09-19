@@ -172,7 +172,7 @@ class SimpleNavEnv(gym.Env):
         
         obs = [ pose[0],
                 self.normalise_theta(pose[1]),
-                *self.normalise_v(*state['velocity'][0]),
+                self.normalise_v(*state['velocity'][0]),
                 self.normalise_v_theta(state['velocity'][-1]),
                 *laserRanges/0.5]
 
@@ -350,6 +350,8 @@ class RewardCarryOn:
 
         current_cell = self.pos2cell(*curr_pos)
 
+        v_x = state['velocity'][0]
+
         reward = -dist   
 
         if (len(self.env.path) and sum(current_cell == self.env.path[0])>1) or not len(self.env.path):
@@ -358,10 +360,9 @@ class RewardCarryOn:
         elif self.env.robot_collision():
             reward = -50
         
-        elif abs(phi) < 1:
-            reward *= max(abs(v_phi), 0.05)
-            if abs(v_phi) < 1:
-                reward *= max(abs(phi), 0.05)
+        elif abs(phi) < 1 and v_x > 0:
+            reward *= max(abs(phi), 0.05)
+            
 
 
         return reward

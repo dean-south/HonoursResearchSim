@@ -374,7 +374,7 @@ class SimEnv():
 
                             # print(f'{obs=} \n {action=}')
 
-                            action = [1,1]
+                            # action = [1,1]
 
                             # print(f'{action=} {action[0]=}')
 

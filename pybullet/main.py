@@ -98,7 +98,7 @@ class SimEnv():
         self.test_mode = args.test_mode
         
 
-        sb3_models = ['sb3', "sac", 'ppo', 'recppo', 'tqc']
+        self.sb3_models = ['td3', "sac", 'ppo', 'recppo', 'tqc']
 
 
         # initialize controllers
@@ -115,7 +115,7 @@ class SimEnv():
 
                 path = os.path.join(os.getcwd() + '/pybullet/saved_models', args.model_name)
                 os.mkdir(path)
-        elif self._ctr == "sb3":
+        elif self._ctr == "td3":
             n_actions = self._env.action_space.shape[-1]
             action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=0.25 * np.ones(n_actions))
 
@@ -127,13 +127,11 @@ class SimEnv():
                 }
 
                 self.run = wandb.init(
-                    project="Go slow",
+                    project="TD3 Maze",
                     config=config,
                     sync_tensorboard=True,  # auto-upload sb3's tensorboard metrics
                     save_code=True,  # optional
-                )
-
-            
+                )        
             
            
             initial_learning_rate = 0.001
@@ -178,6 +176,9 @@ class SimEnv():
             )
         
         elif self._ctr == 'sac':
+            n_actions = self._env.action_space.shape[-1]
+            action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=0.25 * np.ones(n_actions))
+
             if not self.test_mode:
                 config = {
                     "policy_type": "MlpPolicy",
@@ -196,7 +197,8 @@ class SimEnv():
                 'MlpPolicy', # CustomMlpPolicy,
                 self._env,
                 verbose=1,
-                tensorboard_log=f"runs/{self._model_name}"
+                tensorboard_log=f"runs/{self._model_name}",
+                action_noise=action_noise
             )
                 
 
@@ -253,7 +255,7 @@ class SimEnv():
             print("\nNo controller named", self._ctr)
             sys.exit()
 
-        if args.load_model is not None and any(self._ctr == ctr for ctr in sb3_models):
+        if args.load_model is not None and any(self._ctr == ctr for ctr in self.sb3_models):
             print("Loading Model")
             self.model = load_func[self._ctr](f'models/{args.load_model}/model',env=self._env, verbose=1)
 
@@ -323,29 +325,8 @@ class SimEnv():
 
                         # print(self._info['pose'])
                         self._controller.reset()
-                    elif self._ctr == 'sb3':
-
-                        if not self.test_mode:
-                            self.model.learn(total_timesteps=5000000, log_interval=10, 
-                                    callback=WandbCallback(
-                                        gradient_save_freq=10,
-                                        model_save_freq=5000,
-                                        model_save_path=f"models/{self._model_name}",
-                                        verbose=2,
-                                    ),
-                                )
-                            self.run.finish()
-                        else:
-                            # print(state[:6])
-                            action, _ = self.model.predict(obs)
-
-                            # action = [1,1]
-
-                            # print(f'{action=} {action[0]=}')
-
-                            obs, rew, self._done, info = self._movement(action)
                     
-                    elif self._ctr == 'ppo' or self._ctr == 'sac' or self._ctr == 'recppo' or self._ctr == 'tqc':
+                    elif any(self._ctr == ctr for ctr in self.sb3_models):
                         if not self.test_mode:
 
                             # Create the wandb callback
@@ -364,7 +345,7 @@ class SimEnv():
                             )
 
 
-                            self.model.learn(total_timesteps=10000000, log_interval=10, 
+                            self.model.learn(total_timesteps=5000000, log_interval=10, 
                                     callback=wandb_callback
                                 )
                             self.run.finish()

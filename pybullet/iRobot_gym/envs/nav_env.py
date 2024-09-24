@@ -361,7 +361,7 @@ class RewardCarryOn:
             reward = -200
         
         elif abs(phi) < 1 and v_x > 0:
-            reward *= max(abs(phi), 0.05)
+            reward *= max(abs(phi), 0.5)
             
         return reward
 

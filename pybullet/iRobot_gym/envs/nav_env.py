@@ -363,8 +363,6 @@ class RewardCarryOn:
         elif abs(phi) < 1 and v_x > 0:
             reward *= max(abs(phi), 0.05)
             
-
-
         return reward
 
     def done(self, _agent_id, _state):

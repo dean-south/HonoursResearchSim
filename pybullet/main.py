@@ -63,7 +63,7 @@ def exponential_schedule(initial_value, decay_rate=0.99):
         return initial_value * (decay_rate ** (1 - progress_remaining))
     return schedule
 
-load_func = {'sb3':TD3.load, 
+load_func = {'td3':TD3.load, 
             'ppo':PPO.load,
             'sac':SAC.load,
             'recppo': RecurrentPPO.load,
@@ -172,7 +172,6 @@ class SimEnv():
                 self._env,
                 verbose=1,
                 tensorboard_log=f"runs/{self._model_name}",
-                learning_rate=exponential_schedule(initial_learning_rate, decay_rate=0.5)
             )
         
         elif self._ctr == 'sac':

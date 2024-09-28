@@ -167,7 +167,7 @@ class SimpleNavEnv(gym.Env):
 
         state = self._scenario.world.state()[self._scenario.agent.id] 
         laserRanges = self.get_laserranges()
-        laserRanges = laserRanges[range(len(laserRanges)//2,2)]
+        laserRanges = laserRanges[range(0,len(laserRanges)//2,2)]
 
         pose = get_pose(self.path, state)
         

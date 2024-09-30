@@ -356,13 +356,13 @@ class RewardCarryOn:
         reward = -dist   
 
         if (len(self.env.path) and sum(current_cell == self.env.path[0])>1) or not len(self.env.path):
-            reward = 100
+            reward = 150
 
         elif self.env.robot_collision():
             reward = -250
         
         elif abs(phi) < 1 and v_x > 0:
-            reward *= max(abs(phi), 0.5)
+            reward *= max(abs(phi), 0.05)
             
         return reward
 

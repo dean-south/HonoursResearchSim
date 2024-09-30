@@ -385,9 +385,9 @@ class RewardCarryOn:
             self.reset_pose = True
             done = True
             # print('time ran out')
-        elif self.env.robot_collision():                        
-            done = True
-            self.reset_pose = True
+        # elif self.env.robot_collision():                        
+        #     done = True
+        #     self.reset_pose = True
 
 
         return done

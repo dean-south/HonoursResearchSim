@@ -326,7 +326,7 @@ class SimpleNavEnv(gym.Env):
     def robot_collision(self):
         laserRanges = self.get_laserranges()
         for r in laserRanges:
-            if r < 0.2 and r > 0.14:                           
+            if r < 0.25 and r > 0.14:                           
                 return True
         
         return False

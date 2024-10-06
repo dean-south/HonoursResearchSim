@@ -331,6 +331,12 @@ class SimpleNavEnv(gym.Env):
         
         return False
     
+    def get_laser_reward(self):
+        laserRanges = self.get_laserranges()
+        laserRanges = laserRanges[range(0,len(laserRanges)//2,2)]
+
+        return 0.5 * len(laserRanges) - sum(laserRanges)
+    
 class RewardCarryOn:
     "End episode when you reach goal cell. Start next episode immidiately"
 
@@ -353,18 +359,20 @@ class RewardCarryOn:
 
         v_x = state['velocity'][0]
 
-        reward = -dist   
+        reward = -dist
 
         # if (len(self.env.path) and sum(current_cell == self.env.path[0])>1) or not len(self.env.path):
         #     reward = 150
         if dist < 0.3:
-            reward = 150
+            return 150
 
         elif self.env.robot_collision():
-            reward = 250
+            return -250
         
         elif abs(phi) < 1 and v_x > 0:
             reward *= max(abs(phi), 0.05)
+
+        reward -= self.env.get_laser_reward()
             
         return reward
 

@@ -326,7 +326,7 @@ class SimpleNavEnv(gym.Env):
     def robot_collision(self):
         laserRanges = self.get_laserranges()
         for r in laserRanges:
-            if r < 0.25 and r > 0.14:                           
+            if r < 0.19 and r > 0.14:                           
                 return True
         
         return False
@@ -355,11 +355,13 @@ class RewardCarryOn:
 
         reward = -dist   
 
-        if (len(self.env.path) and sum(current_cell == self.env.path[0])>1) or not len(self.env.path):
+        # if (len(self.env.path) and sum(current_cell == self.env.path[0])>1) or not len(self.env.path):
+        #     reward = 150
+        if dist < 0.3:
             reward = 150
 
         elif self.env.robot_collision():
-            reward = -50
+            reward = 250
         
         elif abs(phi) < 1 and v_x > 0:
             reward *= max(abs(phi), 0.05)
@@ -385,9 +387,9 @@ class RewardCarryOn:
             self.reset_pose = True
             done = True
             # print('time ran out')
-        # elif self.env.robot_collision():                        
-        #     done = True
-        #     self.reset_pose = True
+        elif self.env.robot_collision():                        
+            done = True
+            self.reset_pose = True
 
 
         return done

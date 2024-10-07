@@ -335,7 +335,7 @@ class SimpleNavEnv(gym.Env):
         laserRanges = self.get_laserranges()
         laserRanges = laserRanges[range(0,len(laserRanges)//2,2)]
 
-        return 0.5 - np.mean(laserRanges)
+        return 0.5 - np.min(laserRanges)
     
 class RewardCarryOn:
     "End episode when you reach goal cell. Start next episode immidiately"

@@ -107,7 +107,8 @@ class SimpleNavEnv(gym.Env):
         current_cell = self.pos2cell(*state[self._scenario.agent.id]['pose'][:2])
         done = self._RewardFunction.done(self._scenario.agent.id, state)
         if sum(current_cell == self.path[0])>1:
-            self.path = np.delete(self.path,0)
+            self.path = self.get_path()
+            # self.path = np.delete(self.path,0)
        
         self._time +=1
         self._scenario.world.update(
@@ -353,29 +354,20 @@ class RewardCarryOn:
 
         dist, phi = get_pose(self.env.path, state)
 
-        dist *= 16*sqrt(2)
-
-        current_cell = self.pos2cell(*curr_pos)
-
         v_x = state['velocity'][0]
 
-        reward = -dist
+        # reward = - distance to goal - relative orientation to goal + forward velocity - wall proximity
+        reward = - dist - abs(phi)/pi + self.env.normalise_v(v_x) - self.env.get_laser_reward()/(0.5-0.19)
 
         # if (len(self.env.path) and sum(current_cell == self.env.path[0])>1) or not len(self.env.path):
         #     reward = 150
-        if dist < 0.3:
-            return 150
+        if dist < 0.5/(16*sqrt(2)):
+            reward += 150
 
         elif self.env.robot_collision():
-            return -250
-        
-        elif abs(phi) < 1 and v_x > 0:
-            reward *= max(abs(phi), 0.05)
-            reward += v_x
+            reward += -250
 
-
-        reward -= self.env.get_laser_reward()
-            
+                
         return reward
 
     def done(self, _agent_id, _state):
@@ -385,15 +377,15 @@ class RewardCarryOn:
         x,y = state['pose'][:2]
         current_cell = self.pos2cell(x,y)
 
-        if sum(current_cell == self.env.path[0])>1:
-            done = True
+        # if sum(current_cell == self.env.path[0])>1:
+        #     done = True
         # elif prev_cell != current_cell and \
         #     np.linalg.norm([prev_cell, self.env.path[0]]) < np.linalg.norm([current_cell, self.env.path[0]]):
         #     done = True
         #     self.reset_pose = True
 
         #     # print("went to the wrong cell")
-        elif self.env._time % self._time_limit == 0:
+        if self.env._time % self._time_limit == 0:
             self.reset_pose = True
             done = True
             # print('time ran out')

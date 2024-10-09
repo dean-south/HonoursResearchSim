@@ -154,7 +154,7 @@ class SimEnv():
             if not self.test_mode:
                 config = {
                     "policy_type": "MlpPolicy",
-                    "total_timesteps": 10000000,
+                    "total_timesteps": 1000000,
                     "env_name": "Empty-v0",
                 }
 
@@ -205,7 +205,7 @@ class SimEnv():
             if not self.test_mode:
                 config = {
                     "policy_type": "MlpLstmPolicy",
-                    "total_timesteps": 10000000,
+                    "total_timesteps": 1000000,
                     "env_name": "Empty-v0",
                 }
 
@@ -302,9 +302,10 @@ class SimEnv():
             obs = self._env.reset()      
 
             pose = self._env.get_pose()
+            goal_cell = self._env.path[0]
 
             if self.test_mode:
-                print(f'Starting Episode {e}, starting cell: {self.pose_to_cell(pose[:2])}, goal cell: {self._env.path}, ')
+                print(f'Starting Episode {e}, starting cell: {self.pose_to_cell(pose[:2])}, goal cell: {goal_cell}, ')
 
             while not self._done:
 
@@ -344,7 +345,7 @@ class SimEnv():
                             )
 
 
-                            self.model.learn(total_timesteps=1000000, log_interval=10, 
+                            self.model.learn(total_timesteps=2500000, log_interval=10, 
                                     callback=wandb_callback
                                 )
                             self.run.finish()
@@ -359,6 +360,10 @@ class SimEnv():
                             # print(f'{action=} {action[0]=}')
 
                             obs, rew, self._done, info = self._movement(action)
+                            if sum(goal_cell==self._env.path[0])<=1:
+                                goal_cell = self._env.path[0]
+                                pose = self._env.get_pose()
+                                print(f'starting cell: {self.pose_to_cell(pose[:2])}, goal cell: {goal_cell}')
                        
 
                 except KeyboardInterrupt:

@@ -362,10 +362,10 @@ class RewardCarryOn:
         # if (len(self.env.path) and sum(current_cell == self.env.path[0])>1) or not len(self.env.path):
         #     reward = 150
         if dist < 0.5/(16*sqrt(2)):
-            reward += 150
+            reward += 20
 
         elif self.env.robot_collision():
-            reward += -250
+            reward += -10
 
                 
         return reward

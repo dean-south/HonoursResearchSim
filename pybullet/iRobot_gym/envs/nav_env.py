@@ -357,7 +357,7 @@ class RewardCarryOn:
         v_x = state['velocity'][0]
 
         # reward = - distance to goal - relative orientation to goal + forward velocity - wall proximity
-        reward = - dist - 2*abs(phi)/pi + self.env.normalise_v(v_x) - self.env.get_laser_reward()/(0.5-0.19)
+        reward = - dist - 2*abs(phi)/pi + 0*self.env.normalise_v(v_x) - self.env.get_laser_reward()/(0.5-0.19)
 
         # if (len(self.env.path) and sum(current_cell == self.env.path[0])>1) or not len(self.env.path):
         #     reward = 150

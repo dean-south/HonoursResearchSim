@@ -18,8 +18,8 @@ agents:
     name: iRobot
     sensors: [ laser]
   task:
-    task_name: reward_rapprochement_goal
-    params: { time_limit: -1, goal_size_detection: 0.}
+    task_name: 2018apec
+    params: { time_limit: 10000, goal_size_detection: 0.}
   starting_position: [-7.5,-7.5, 0.0]
   starting_orientation: [ 0.0, 0.0, 1.571]
  

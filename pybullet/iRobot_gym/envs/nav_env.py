@@ -78,7 +78,7 @@ class SimpleNavEnv(gym.Env):
         elif self._scenario.agent.task_name == 'reward_straight_navigation':
             self._RewardFunction = RewardNavStr(
                 self._scenario.agent.task_param, self)
-            
+        
             self.get_start_pose = self.random_start_pose
             self.get_path = self.get_nav_bend_path
         elif self._scenario.agent.task_name == 'carry_on':
@@ -87,6 +87,11 @@ class SimpleNavEnv(gym.Env):
 
             self.get_start_pose = self.carry_on_start_pose
             self.get_path = self.get_carry_on_path
+        elif self._scenario.agent.task_name == '2018apec':
+            self._RewardFunction = RewardCarryOn(
+                self._scenario.agent.task_param, self)
+            self.get_start_pose = self.get_2018_apec_start_pose
+            self.get_path = self.get_2018_apec_path
             
         # Your existing initialization code here
         
@@ -107,8 +112,9 @@ class SimpleNavEnv(gym.Env):
         current_cell = self.pos2cell(*state[self._scenario.agent.id]['pose'][:2])
         done = self._RewardFunction.done(self._scenario.agent.id, state)
         if sum(current_cell == self.path[0])>1:
-            self.path = self.get_path()
-            # self.path = np.delete(self.path,0)
+            self.path = np.delete(self.path,0,axis=0)
+            if len(self.path) == 0:
+                self.path = self.get_path()
        
         self._time +=1
         self._scenario.world.update(
@@ -122,7 +128,10 @@ class SimpleNavEnv(gym.Env):
         if not self._initialized:
             self._scenario.world.init()
             self._initialized = True
-            self._scenario.agent.reset(self.random_start_pose())
+            if self._scenario.agent.task_name != '2018apec':
+                self._scenario.agent.reset(self.random_start_pose())
+            else:
+                self._scenario.agent.reset(self.get_start_pose())
         else:
             self._scenario.world.reset()
             self._scenario.agent.reset(self.get_start_pose())
@@ -286,6 +295,25 @@ class SimpleNavEnv(gym.Env):
         cell_path.append(des_cell)
 
         return np.array(cell_path)
+
+    def get_2018_apec_start_pose(self):
+        pos = [-7.5,-7.5,0]
+        oritentation = p.getQuaternionFromEuler([0,0,pi/2])
+
+        return [pos, oritentation]
+    
+    def get_2018_apec_path(self):
+
+        cell_path = np.array([
+            [0,15], [15,15], [15,13], [2,13], [2,1], [14,1],
+            [14,3], [13,3], [13,2], [12,2], [12,3], [11,3],
+            [11,2], [10,2], [10,5], [9,5], [9,4], [8,4],
+            [8,3], [6,3], [6,4], [7,4], [7,5], [8,5],
+            [8,6], [6,6], [6,7], [7,7]
+        ])
+
+        return cell_path
+
     
     @staticmethod
     def normalise_pos(x,y):
@@ -357,7 +385,7 @@ class RewardCarryOn:
         v_x = state['velocity'][0]
 
         # reward = - distance to goal - relative orientation to goal + forward velocity - wall proximity
-        reward = - 1.3*dist - 2*abs(phi)/pi + self.env.normalise_v(v_x) - self.env.get_laser_reward()/(0.5-0.19)
+        reward = - 1.3*dist - 2*abs(phi)/pi + 0.7*self.env.normalise_v(v_x) - 0.3*self.env.get_laser_reward()/(0.5-0.19)
 
         # if (len(self.env.path) and sum(current_cell == self.env.path[0])>1) or not len(self.env.path):
         #     reward = 150

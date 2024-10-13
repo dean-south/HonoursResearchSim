@@ -3,7 +3,7 @@ import sys
 import time
 import csv
 import argparse
-import gym
+import gym as gym
 import pybullet as p
 import numpy as np
 import random
@@ -18,7 +18,7 @@ from stable_baselines3.common.noise import NormalActionNoise
 from stable_baselines3.td3.policies import MlpPolicy
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 from stable_baselines3.common.noise import NormalActionNoise
-from stable_baselines3.td3.policies import MlpPolicy
+from stable_baselines3.ppo import MlpPolicy
 from stable_baselines3.common.callbacks import CheckpointCallback
 from math import sin, cos, pi
 from sb3_contrib import RecurrentPPO, TQC
@@ -166,12 +166,15 @@ class SimEnv():
                     )
                 
             initial_learning_rate = 0.0003
+
+            policy_kwargs = dict(net_arch=[128, 128])
                 
             self.model = PPO(
                 'MlpPolicy', # CustomMlpPolicy,
                 self._env,
                 verbose=1,
                 tensorboard_log=f"runs/{self._model_name}",
+                policy_kwargs=policy_kwargs
             )
         
         elif self._ctr == 'sac':
@@ -346,6 +349,7 @@ class SimEnv():
 
 
                             self.model.learn(total_timesteps=5000000, log_interval=10, 
+
                                     callback=wandb_callback
                                 )
                             self.run.finish()
@@ -472,7 +476,7 @@ def main():
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description='Launch pybullet simulation run.')
-    parser.add_argument('--env', type=str, default="blank_gui",
+    parser.add_argument('--env', type=str, default="2018apec",
                         help='environnement: kitchen, maze_hard, race_track')
     parser.add_argument('--ctr', type=str, default="RL",
                         help='controller: wall, rule, braitenberg, novelty, RL')

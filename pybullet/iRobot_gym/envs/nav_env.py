@@ -359,9 +359,9 @@ class SimpleNavEnv(gym.Env):
     
     def robot_collision(self):
         laserRanges = self.get_laserranges()
-        for r in laserRanges:
-            if r < 0.19 and r > 0.14:                           
-                return True
+
+        if round(np.min(laserRanges),2) <= 0.2 and round(np.min(laserRanges),2) > 0.14:
+            return True
         
         return False
     
@@ -375,7 +375,7 @@ class SimpleNavEnv(gym.Env):
         laserRanges = self.get_laserranges()
         laserRanges = laserRanges[range(0,len(laserRanges)//2,2)]
 
-        dist = (0.5 - np.min(laserRanges))/(0.5-0.19)
+        dist = (0.5 - np.min(laserRanges))/(0.3)
         angle = np.argmin(laserRanges)/10 if dist > 0 else -1
 
         return dist, angle
@@ -400,7 +400,7 @@ class RewardCarryOn:
         v_x = state['velocity'][0]
 
         # reward = - distance to goal - relative orientation to goal + forward velocity - wall proximity
-        reward = - 2*dist - 1.3*abs(phi)/pi + 0.7*self.env.normalise_v(v_x) - 0.2*self.env.get_obj_dist()/(0.5-0.19)
+        reward = - 2*dist - 1.3*abs(phi)/pi + 0.7*self.env.normalise_v(v_x) - 0.2*self.env.get_obj_dist()/(0.3)
 
         # if (len(self.env.path) and sum(current_cell == self.env.path[0])>1) or not len(self.env.path):
         #     reward = 150

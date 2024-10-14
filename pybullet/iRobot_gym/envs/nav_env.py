@@ -58,7 +58,7 @@ class SimpleNavEnv(gym.Env):
 
         self.action_space = spaces.Box(low=-1, high=1, shape=(2,), dtype=float)
 
-        self.observation_space = spaces.Box(low=0, high=1, shape=(14,), dtype=float)
+        self.observation_space = spaces.Box(low=0, high=1, shape=(6,), dtype=float)
 
         self.path = []
 
@@ -180,12 +180,16 @@ class SimpleNavEnv(gym.Env):
         laserRanges = laserRanges[range(0,len(laserRanges)//2,2)]
 
         pose = get_pose(self.path, state)
+
+        dist_to_obj, angle_to_obj = self.get_laser_obs_space()
         
         obs = [ pose[0],
                 self.normalise_theta(pose[1]),
                 self.normalise_v(state['velocity'][0]),
                 self.normalise_v_theta(state['velocity'][-1]),
-                *laserRanges/0.5]
+                # *laserRanges/0.5,
+                
+                ]
 
         return obs
 
@@ -360,11 +364,21 @@ class SimpleNavEnv(gym.Env):
         
         return False
     
-    def get_laser_reward(self):
+    def get_obj_dist(self):
         laserRanges = self.get_laserranges()
         laserRanges = laserRanges[range(0,len(laserRanges)//2,2)]
 
         return 0.5 - np.min(laserRanges)
+
+    def get_laser_obs_space(self):    
+        laserRanges = self.get_laserranges()
+        laserRanges = laserRanges[range(0,len(laserRanges)//2,2)]
+
+        dist = (0.5 - np.min(laserRanges))/(0.5-0.19)
+        angle = np.argmin(laserRanges)/10 if dist > 0 else -1
+
+        return dist, angle
+
     
 class RewardCarryOn:
     "End episode when you reach goal cell. Start next episode immidiately"
@@ -385,7 +399,7 @@ class RewardCarryOn:
         v_x = state['velocity'][0]
 
         # reward = - distance to goal - relative orientation to goal + forward velocity - wall proximity
-        reward = - 2*dist - 1.3*abs(phi)/pi + 0.7*self.env.normalise_v(v_x) - 0.5*self.env.get_laser_reward()/(0.5-0.19)
+        reward = - 2*dist - 1.3*abs(phi)/pi + 0.7*self.env.normalise_v(v_x) - 0.5*self.env.get_obj_dist()/(0.5-0.19)
 
         # if (len(self.env.path) and sum(current_cell == self.env.path[0])>1) or not len(self.env.path):
         #     reward = 150

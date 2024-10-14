@@ -188,7 +188,8 @@ class SimpleNavEnv(gym.Env):
                 self.normalise_v(state['velocity'][0]),
                 self.normalise_v_theta(state['velocity'][-1]),
                 # *laserRanges/0.5,
-                
+                dist_to_obj,
+                angle_to_obj,
                 ]
 
         return obs
@@ -399,7 +400,7 @@ class RewardCarryOn:
         v_x = state['velocity'][0]
 
         # reward = - distance to goal - relative orientation to goal + forward velocity - wall proximity
-        reward = - 2*dist - 1.3*abs(phi)/pi + 0.7*self.env.normalise_v(v_x) - 0.5*self.env.get_obj_dist()/(0.5-0.19)
+        reward = - 2*dist - 1.3*abs(phi)/pi + 0.7*self.env.normalise_v(v_x) - 0.2*self.env.get_obj_dist()/(0.5-0.19)
 
         # if (len(self.env.path) and sum(current_cell == self.env.path[0])>1) or not len(self.env.path):
         #     reward = 150

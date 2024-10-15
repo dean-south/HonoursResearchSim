@@ -341,11 +341,11 @@ class SimEnv():
                             )
 
                             # Create a checkpoint callback to save the model
-                            checkpoint_callback = CheckpointCallback(
-                                save_freq=10000,  # Save every 10000 steps
-                                save_path=f"./models/{self.run.id}/",
-                                name_prefix="rl_model"
-                            )
+                            # checkpoint_callback = CheckpointCallback(
+                            #     save_freq=10000,  # Save every 10000 steps
+                            #     save_path=f"./models/{self.run.id}/",
+                            #     name_prefix="rl_model"
+                            # )
 
 
                             self.model.learn(total_timesteps=5000000, log_interval=10, 

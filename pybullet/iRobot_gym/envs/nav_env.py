@@ -92,7 +92,17 @@ class SimpleNavEnv(gym.Env):
                 self._scenario.agent.task_param, self)
             self.get_start_pose = self.get_2018_apec_start_pose
             self.get_path = self.get_2018_apec_path
-            
+        elif self._scenario.agent.task_name == 'training_env':
+            self._RewardFunction = RewardCarryOn(
+                self._scenario.agent.task_param, self)
+            self.get_start_pose = self.get_2018_apec_start_pose
+            self.get_path = self.get_training_env_path
+        elif self._scenario.agent.task_name == 'straight_env':
+            self._RewardFunction = RewardCarryOn(
+                self._scenario.agent.task_param, self)
+            self.get_start_pose = self.get_2018_apec_start_pose
+            self.get_path = self.get_straight_env_path
+
         # Your existing initialization code here
         
         self.camera_controller = CameraController()
@@ -128,7 +138,7 @@ class SimpleNavEnv(gym.Env):
         if not self._initialized:
             self._scenario.world.init()
             self._initialized = True
-            if self._scenario.agent.task_name != '2018apec':
+            if self._scenario.agent.task_name != '2018apec' and self._scenario.agent.task_name != 'training_env':
                 self._scenario.agent.reset(self.random_start_pose())
             else:
                 self._scenario.agent.reset(self.get_start_pose())
@@ -318,6 +328,39 @@ class SimpleNavEnv(gym.Env):
         ])
 
         return cell_path
+    
+    def get_training_env_path(self):
+
+        cell_path = np.array([
+            [0,0], [0,15], [0,1], [1,1], [1,15], [1,1], [2,1], [2,15],
+            [3,15], [3,1], [3,15], [4,15], [4,1], [5,1], [5,14], [6,14],
+            [6,14], [7,15], [7,14], [8,14], [8,15], [9,15], [9,14], [10,14],
+            [10,15], [11,15], [11,14], [12,14], [12,15], [13,15], [13,14], [14,14],
+            [14,15], [15,15], [15,13], [14,13], [14,12], [13,12], [13,11], [12,11],
+            [12,10], [11,10], [11,9], [10,9], [10,8], [9,8], [9,7], [8,7],
+            [8,6], [7,6], [7,4], [8,4], [8,5], [9,5], [9,6], [10,6],
+            [10,7], [11,7], [11,8], [12,8], [12,9], [13,9], [13,10], [14,10],
+            [14,11], [15,11], [15,12], [15,9], [14,9], [14,8], [13,8], [13,7],
+            [12,7], [12,6], [11,6], [11,5], [10,5], [10,4], [9,4], [9,3],
+            [8,3], [8,2], [7,2], [7,1], [14,1], [14,9], [15,9], [15,0] 
+        ])
+
+        return cell_path
+    
+
+    def get_straight_env_path(self):
+        cell_path = np.array([
+            [0,0], [0,15], [1,15], [1,0],
+            [2,0], [2,15], [3,15], [3,0],
+            [4,0], [4,15], [5,15], [5,0],
+            [6,0], [6,15], [7,15], [7,0],
+            [8,0], [8,15], [9,15], [9.0],
+            [10,0], [10,15], [11,15], [11,0],
+            [12,0], [12,15], [13,15], [13,0],
+            [14,0], [14,15], [15,15], [15,0]
+        ])
+
+        return cell_path
 
     
     @staticmethod
@@ -400,7 +443,7 @@ class RewardCarryOn:
         v_x = state['velocity'][0]
 
         # reward = - distance to goal - relative orientation to goal + forward velocity - wall proximity
-        reward = - 2*dist - 1.3*abs(phi)/pi + 0.7*self.env.normalise_v(v_x) - 0.2*self.env.get_obj_dist()/(0.3)
+        reward = - 1*dist - 1.*abs(phi)/pi + 1*self.env.normalise_v(v_x) - 1*self.env.get_obj_dist()/(0.3)
 
         # if (len(self.env.path) and sum(current_cell == self.env.path[0])>1) or not len(self.env.path):
         #     reward = 150

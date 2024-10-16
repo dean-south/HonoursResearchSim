@@ -117,7 +117,7 @@ class SimEnv():
                 os.mkdir(path)
         elif self._ctr == "td3":
             n_actions = self._env.action_space.shape[-1]
-            action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=0.25 * np.ones(n_actions))
+            action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=0.15 * np.ones(n_actions))
 
             if not self.test_mode:
                 config = {
@@ -148,6 +148,7 @@ class SimEnv():
                 policy_delay=10,
                 gamma=0.99,
                 learning_rate=exponential_schedule(initial_learning_rate, decay_rate=0.5),
+                learning_starts=0
                 )
         elif self._ctr == 'ppo':
 
@@ -179,7 +180,7 @@ class SimEnv():
         
         elif self._ctr == 'sac':
             n_actions = self._env.action_space.shape[-1]
-            action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=0.25 * np.ones(n_actions))
+            action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=0.15 * np.ones(n_actions))
 
             if not self.test_mode:
                 config = {

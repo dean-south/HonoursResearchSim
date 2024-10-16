@@ -58,7 +58,7 @@ class SimpleNavEnv(gym.Env):
 
         self.action_space = spaces.Box(low=-1, high=1, shape=(2,), dtype=float)
 
-        self.observation_space = spaces.Box(low=0, high=1, shape=(6,), dtype=float)
+        self.observation_space = spaces.Box(low=0, high=1, shape=(14,), dtype=float)
 
         self.path = []
 
@@ -138,7 +138,7 @@ class SimpleNavEnv(gym.Env):
         if not self._initialized:
             self._scenario.world.init()
             self._initialized = True
-            if self._scenario.agent.task_name != '2018apec' and self._scenario.agent.task_name != 'training_env':
+            if self._scenario.agent.task_name != '2018apec' and self._scenario.agent.task_name != 'training_env' and self._scenario.agent.task_name != 'straight_env':
                 self._scenario.agent.reset(self.random_start_pose())
             else:
                 self._scenario.agent.reset(self.get_start_pose())
@@ -197,9 +197,9 @@ class SimpleNavEnv(gym.Env):
                 self.normalise_theta(pose[1]),
                 self.normalise_v(state['velocity'][0]),
                 self.normalise_v_theta(state['velocity'][-1]),
-                # *laserRanges/0.5,
-                dist_to_obj,
-                angle_to_obj,
+                *laserRanges/0.5,
+                # dist_to_obj,
+                # angle_to_obj,
                 ]
 
         return obs

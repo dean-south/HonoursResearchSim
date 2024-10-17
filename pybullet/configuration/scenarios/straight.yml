@@ -1,6 +1,6 @@
 world:
-  name: straight_env
-  sdf: straight_env.urdf
+  name: straight
+  sdf: straight.urdf
   scale: 8.07
   physics:
     gravity: -9.81

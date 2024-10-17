@@ -1,5 +1,5 @@
 <?xml version="1.0"?> 
-<robot name="straight_env">
+<robot name="straigh">
 
     <material name="black">
         <color rgba="0.2 0.2 0.2 0.95"/>
@@ -9,7 +9,7 @@
         <visual>
             <origin xyz="0.0 0.0 0.05" rpy="0.0 0.0 0.0"/>
             <geometry>
-                <mesh filename="meshes/straight_env.obj" scale="0.02 0.02 0.01" />
+                <mesh filename="meshes/straight.obj" scale="0.02 0.02 0.01" />
             </geometry>
           <material name="black"/>
         </visual>
@@ -17,7 +17,7 @@
         <collision concave="yes" name="collision_0">
            <origin xyz="0.0 0.0 0.05" rpy="0.0 0.0 0.0"/>
             <geometry>
-                <mesh filename="meshes/straight_env.obj" scale="0.02 0.02 0.01" />
+                <mesh filename="meshes/straight.obj" scale="0.02 0.02 0.01" />
             </geometry>
         </collision>
 

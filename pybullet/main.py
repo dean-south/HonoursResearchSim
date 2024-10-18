@@ -140,7 +140,7 @@ class SimEnv():
             self.model = TD3(
                 'MlpPolicy',# CustomMlpPolicy ,
                 self._env, 
-                action_noise=action_noise, 
+                # action_noise=action_noise, 
                 verbose=1, 
                 tensorboard_log=f"runs/{self._model_name}",
                 tau=0.005,

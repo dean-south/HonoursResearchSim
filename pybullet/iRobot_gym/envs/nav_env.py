@@ -120,12 +120,15 @@ class SimpleNavEnv(gym.Env):
         self.observation = self.get_world_observation()
 
         reward = self._RewardFunction.reward(self._scenario.agent.id, state)
+
+        dist = get_pose(self.path, state[self._scenario.agent.id])[0]*16*sqrt(2)
        
         current_cell = self.pos2cell(*state[self._scenario.agent.id]['pose'][:2])
         done = self._RewardFunction.done(self._scenario.agent.id, state)
-        if sum(current_cell == self.path[0])>1:
+        if dist < 0.3:
             self.path = np.delete(self.path,0,axis=0)
             if len(self.path) == 0:
+                done = True
                 self.path = self.get_path()
        
         self._time +=1

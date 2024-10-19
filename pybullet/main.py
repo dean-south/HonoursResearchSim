@@ -196,12 +196,16 @@ class SimEnv():
                         save_code=True,  # optional
                     )
                 
+            initial_learning_rate = 0.0003
+
             self.model = SAC(
                 'MlpPolicy', # CustomMlpPolicy,
                 self._env,
                 verbose=1,
                 tensorboard_log=f"runs/{self._model_name}",
-                action_noise=action_noise
+                # action_noise=action_noise
+                learning_rate=exponential_schedule(initial_learning_rate, decay_rate=0.5),
+                learning_starts=0
             )
                 
 

@@ -46,6 +46,7 @@ def get_pose(path, state):
 
     return pos_, phi
 
+fix_path_tasks = ['2018apec', 'training_env', 'straight_env']
 
 class SimpleNavEnv(gym.Env):
 
@@ -128,8 +129,10 @@ class SimpleNavEnv(gym.Env):
         if dist < 0.3:
             self.path = np.delete(self.path,0,axis=0)
             if len(self.path) == 0:
-                done = True
                 self.path = self.get_path()
+                if any(self._scenario.agent.task_name == task for task in fix_path_tasks):
+                    done = True
+
        
         self._time +=1
         self._scenario.world.update(
@@ -143,7 +146,7 @@ class SimpleNavEnv(gym.Env):
         if not self._initialized:
             self._scenario.world.init()
             self._initialized = True
-            if self._scenario.agent.task_name != '2018apec' and self._scenario.agent.task_name != 'training_env' and self._scenario.agent.task_name != 'straight_env':
+            if not any(self._scenario.agent.task_name == task for task in fix_path_tasks):
                 self._scenario.agent.reset(self.random_start_pose())
             else:
                 self._scenario.agent.reset(self.get_start_pose())

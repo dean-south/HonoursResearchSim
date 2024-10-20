@@ -205,7 +205,8 @@ class SimEnv():
                 tensorboard_log=f"runs/{self._model_name}",
                 # action_noise=action_noise
                 learning_rate=exponential_schedule(initial_learning_rate, decay_rate=0.5),
-                learning_starts=0
+                learning_starts=0,
+                target_update_interval=10
             )
                 
 
@@ -264,7 +265,8 @@ class SimEnv():
 
         if args.load_model is not None and any(self._ctr == ctr for ctr in self.sb3_models):
             print("Loading Model")
-            self.model = load_func[self._ctr](f'models/{args.load_model}/model',env=self._env, verbose=1)
+            self.model.set_parameters(f'models/{args.load_model}/model')
+            # self.model = load_func[self._ctr](f'models/{args.load_model}/model',env=self._env, verbose=1)
 
     def _movement(self, action):
     

@@ -1,0 +1,25 @@
+world:
+  name: 2014japan
+  sdf: 2014japan.urdf
+  scale: 8.07
+  physics:
+    gravity: -9.81
+  simulation:
+    time_step: 0.016666 #240Hz =0.00416666 the default time step , 60Hz =0.016666
+    GUI: True
+    following_camera : False
+  goal:
+    goal_position: [0,0,0]
+    goal_size : 0.2
+  
+agents:
+  id: A
+  vehicle:
+    name: iRobot
+    sensors: [ laser]
+  task:
+    task_name: 2014japan
+    params: { time_limit: 100000, goal_size_detection: 0.}
+  starting_position: [-7.5,-7.5, 0.0]
+  starting_orientation: [ 0.0, 0.0, 1.571]
+ 

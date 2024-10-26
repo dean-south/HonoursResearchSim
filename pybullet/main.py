@@ -1,16 +1,11 @@
 import os
 import sys
-import time
-import csv
 import argparse
 import gym as gym
-import pybullet as p
 import numpy as np
-import random
-import matplotlib.pyplot as plt
-import pandas as pd
 import wandb
-import torch as th
+import json
+import csv
 from wandb.integration.sb3 import WandbCallback
 from stable_baselines3 import TD3, HerReplayBuffer, PPO, SAC
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
@@ -33,17 +28,6 @@ from controllers.novelty_ctr import NoveltyController
 from controllers.RL_ctr import Agent
 from controllers.blank_ctr import BlankController
 
-
-class CustomMlpPolicy(MlpPolicy):
-                def _build_mlp_extractor(self):
-                    super()._build_mlp_extractor()
-                    
-                    # Modify the actor network
-                    last_layer_size = self.actor.latent_pi.shape[1]
-                    self.actor.mu = th.nn.Sequential(
-                        th.nn.Linear(last_layer_size, self.action_space.shape[0]),
-                        th.nn.Tanh()  # Add Tanh activation function
-                    )
 
 def linear_schedule(initial_value):
     """
@@ -303,13 +287,24 @@ class SimEnv():
         avg_score_history = []
         avg_reward_history = []
 
+        velocity_history = np.array([])
+        episode_lenghts = np.array([])
+        episode_completeness = np.array([])
+        num_crashes = 0
+        num_timeouts = 0
+        num_complete = 0
+
         kill_sim = False
 
         for e in range(self._episodes if self.test_mode else 1):
             self._done = 0
             score = 0
             self._i = -1
-            obs = self._env.reset()      
+            obs = self._env.reset()
+
+            path_len = len(self._env.path)
+
+            goals_reached = 0     
 
             pose = self._env.get_pose()
             goal_cell = self._env.path[0]
@@ -371,11 +366,14 @@ class SimEnv():
                             # print(f'{action=} {action[0]=}')
 
                             obs, rew, self._done, info = self._movement(action)
-                            if sum(goal_cell==self._env.path[0])<=1:
-                                goal_cell = self._env.path[0]
-                                pose = self._env.get_pose()
-                                print(f'starting cell: {self.pose_to_cell(pose[:2])}, goal cell: {goal_cell}')
-                       
+
+                            velocity_history = np.append(velocity_history, info['velocity'][0])
+
+                            # if sum(goal_cell==self._env.path[0])<=1:
+                            #     goals_reached += 1
+                            #     goal_cell = self._env.path[0]
+                            #     pose = self._env.get_pose()
+                            #     print(f'starting cell: {self.pose_to_cell(pose[:2])}, goal cell: {goal_cell}')  
 
                 except KeyboardInterrupt:
                     print(' The simulation was forcibly stopped.')
@@ -384,90 +382,37 @@ class SimEnv():
                     kill_sim = True
                     break
 
+            
+            if self.test_mode:
+                episode_lenghts = np.append(episode_lenghts, self._i)   
+                episode_completeness = np.append(episode_completeness, goals_reached/path_len)
+                if self._env.robot_collision():
+                    num_crashes += 1
+                elif goals_reached/path_len == 1:
+                    num_complete += 1
+                else:
+                    num_timeouts += 1
+
             if kill_sim:
                 break
             
-            # score_history.append(score)
-            # avg_score = np.mean(score_history[-100:])
-            # avg_score_history.append(avg_score)
-            # avg_reward_history.append(score/self._i)
+        if self.test_mode:
+            print(f'velocity mean: {np.mean(velocity_history)}, velocity variance: {np.var(velocity_history)}')
+            print(f'avg episode length: {np.mean(episode_lenghts)}')
+            print(f'avg episode completeness: {np.mean(episode_completeness)}')
+            print(f'number of completes: {num_complete}, number of crashes {num_crashes}, number of timeouts {num_timeouts}')
 
-            # self.save_scores(score_history, avg_score_history, avg_reward_history)
-            # self.create_graph()
+            data = {"velocity mean": np.mean(velocity_history),
+                    'velocity variance': np.var(velocity_history),
+                    'avg episode length': np.mean(episode_lenghts),
+                    'avg episode completeness': np.mean(episode_completeness),
+                    'number of completes, crashes, timemouts':[num_complete, num_crashes, num_timeouts]}
+            
 
-            # if avg_score > best_score and self._ctr == "RL":
-            #     best_score = avg_score
-            #     if not self.test_mode:
-            #         self._controller.save_models(e)
-            # elif e % 500 == 0 and not self.test_mode:
-            #     self._controller.save_models(e)
-            # p.resetBasePositionAndOrientation(3, [-9.3, -9.25, 0.0], [0, 0, 1, 1])
+            with open(f"data/{self._env._scenario.agent.task_name}_{self._ctr}.json", 'w') as outfile:
+                json.dump(data, outfile)
 
         self._env.close()
-
-    def save_scores(self, scores, avg_scores, avg_rewards):
-        cwd = os.getcwd()
-        data_path = os.path.join(cwd, 'pybullet/Data')
-
-        episodes = len(scores)
-
-        data = [[e, scores[e], avg_scores[e], avg_rewards[e]] for e in range(episodes)]
-
-        with open(data_path + f'/{self._model_name}.csv', 'w') as file:
-            writer = csv.writer(file)
-            writer.writerow(["episodes", "scores", 'avg_scores', 'avg_rewards'])
-            writer.writerows(data)
-
-
-    def create_graph(self):
-        cwd = os.getcwd()
-        data_path = os.path.join(cwd, 'pybullet/Data')
-        graph_path = os.path.join(cwd, 'pybullet/Graphs')
-
-        data = pd.read_csv(data_path + f'/{self._model_name}.csv')
-
-        # Extract the y-values
-        y_scores = data['scores'].values
-        y_avg_scores = data['avg_scores'].values
-        y_avg_rewards = data['avg_rewards'].values
-
-        # Generate x-values
-        x = data['episodes'].values
-
-        # Create a line graph
-        plt.plot(x, y_scores, label='Episode Score')
-        plt.plot(x, y_avg_scores, label='Rolling Average Score')
-        plt.plot(x, y_avg_rewards, label="Average Reward per Episode")
-
-        # Add title and labels
-        plt.title(f'{self._model_name} Score Graph')
-        plt.xlabel('Episode')
-        plt.ylabel('Score/Reward')
-
-        plt.legend()
-
-        # Save the graph to a file
-        plt.savefig(f'{graph_path}/{self._model_name}.png')
-
-        # Close the plot to free up memory
-        plt.close()
-        
-
-    def save_result(self):
-        """Save the simulation data in a csv file in the folder
-        corresponding to the controller and name it accordingly.
-        """
-        base_path = os.path.dirname(os.path.abspath(__file__))
-        path = f'{base_path}/../results/{args.env}/bullet_{args.ctr}_'
-        i = 1
-        if os.path.exists(path+str(i)+".csv"):
-            while os.path.exists(path+str(i)+".csv"):
-                i += 1
-        with open(path+str(i)+".csv", 'w', newline='') as file:
-            writer = csv.writer(file)
-            writer.writerow(["steps", "x", "y", "z", "roll", "pitch", "yaw",
-                             "distance_to_obj", "laser"])
-            writer.writerows(self._liste_position)
 
 
 def main():
@@ -495,7 +440,7 @@ if __name__ == "__main__":
                         help='verbose for controller: True or False')
     parser.add_argument('--file_name', type=str,
                         default='NoveltyFitness/9/maze_nsfit9-gen38-p0', help='file name of the invidual to load if ctr=novelty')
-    parser.add_argument('--episodes', type=int, default=1000,
+    parser.add_argument('--episodes', type=int, default=10,
                         help='how many training episodes')
     parser.add_argument('--model_name', type=str, default='model',
                         help='name of the model being trained')

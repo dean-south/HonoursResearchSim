@@ -46,7 +46,7 @@ def get_pose(path, state):
 
     return pos_, phi
 
-fix_path_tasks = ['2018apec', 'training_env', 'straight_env']
+fix_path_tasks = ['2018apec', 'training_env', 'straight_env', '2014japan']
 
 class SimpleNavEnv(gym.Env):
 
@@ -93,6 +93,11 @@ class SimpleNavEnv(gym.Env):
                 self._scenario.agent.task_param, self)
             self.get_start_pose = self.get_2018_apec_start_pose
             self.get_path = self.get_2018_apec_path
+        elif self._scenario.agent.task_name == '2014japan':
+            self._RewardFunction = RewardCarryOn(
+                self._scenario.agent.task_param, self)
+            self.get_start_pose = self.get_2018_apec_start_pose
+            self.get_path = self.get_2014_japan_path
         elif self._scenario.agent.task_name == 'training_env':
             self._RewardFunction = RewardCarryOn(
                 self._scenario.agent.task_param, self)
@@ -337,7 +342,22 @@ class SimpleNavEnv(gym.Env):
 
         return cell_path
     
+    def get_2014_japan_path(self):
+
+        cell_path = np.array([
+            [0,15],[1,15],[1,0],[2,0],[2,15],[15,15],
+            [15,13],[14,13],[14,14],[4,14],[4,10],[3,10],
+            [3,9],[8,9],[8,10],[9,10],[9,11],[7,11],
+            [7,12],[12,12],[12,11],[11,11],[11,10],[10,10],
+            [10,9],[9,9],[9,8],[8,8]
+        ])
+
+        return cell_path
+
+    
     def get_training_env_path(self):
+
+        self.reverse_path = random.randint(0,1)
 
         cell_path = np.array([
             [0,0], [0,15], [0,1], [1,1], [1,15], [1,1], [2,1], [2,15],
@@ -350,10 +370,13 @@ class SimpleNavEnv(gym.Env):
             [10,7], [11,7], [11,8], [12,8], [12,9], [13,9], [13,10], [14,10],
             [14,11], [15,11], [15,12], [15,9], [14,9], [14,8], [13,8], [13,7],
             [12,7], [12,6], [11,6], [11,5], [10,5], [10,4], [9,4], [9,3],
-            [8,3], [8,2], [7,2], [7,1], [14,1], [14,9], [15,9], [15,0] 
+            [8,3], [8,2], [7,2], [7,1], [14,1], [14,9], [15,9], [15,0], [0,0]
         ])
 
-        return cell_path
+        if self.reverse_path:
+            cell_path = np.flip(cell_path, axis=0)
+
+        return cell_path[1:]
     
     def get_straight_start_pose(self):
         
@@ -373,13 +396,13 @@ class SimpleNavEnv(gym.Env):
             [8,0], [8,15], [9,15], [9,0],
             [10,0], [10,15], [11,15], [11,0],
             [12,0], [12,15], [13,15], [13,0],
-            [14,0], [14,15], [15,15], [15,0]
+            [14,0], [14,15], [15,15], [15,0],
         ])
 
         if self.reverse_path:
             cell_path = np.flip(cell_path, axis=0)
 
-        return cell_path
+        return cell_path[1:]
 
     
     @staticmethod

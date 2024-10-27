@@ -164,7 +164,7 @@ class SimEnv():
         
         elif self._ctr == 'sac':
             n_actions = self._env.action_space.shape[-1]
-            action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=0.15 * np.ones(n_actions))
+            action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=0.05 * np.ones(n_actions))
 
             if not self.test_mode:
                 config = {
@@ -189,8 +189,8 @@ class SimEnv():
                 tensorboard_log=f"runs/{self._model_name}",
                 # action_noise=action_noise
                 learning_rate=exponential_schedule(initial_learning_rate, decay_rate=0.5),
-                learning_starts=0,
-                target_update_interval=10
+                # learning_starts=0,
+                # target_update_interval=10
             )
                 
 
@@ -350,7 +350,7 @@ class SimEnv():
                             # )
 
 
-                            self.model.learn(total_timesteps=5000000, log_interval=10, 
+                            self.model.learn(total_timesteps=2500000, log_interval=10, 
 
                                     callback=wandb_callback
                                 )

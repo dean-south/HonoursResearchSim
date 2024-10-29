@@ -440,7 +440,7 @@ if __name__ == "__main__":
                         help='verbose for controller: True or False')
     parser.add_argument('--file_name', type=str,
                         default='NoveltyFitness/9/maze_nsfit9-gen38-p0', help='file name of the invidual to load if ctr=novelty')
-    parser.add_argument('--episodes', type=int, default=10,
+    parser.add_argument('--episodes', type=int, default=100,
                         help='how many training episodes')
     parser.add_argument('--model_name', type=str, default='model',
                         help='name of the model being trained')

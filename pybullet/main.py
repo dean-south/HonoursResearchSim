@@ -350,7 +350,7 @@ class SimEnv():
                             # )
 
 
-                            self.model.learn(total_timesteps=5000000, log_interval=10, 
+                            self.model.learn(total_timesteps=10000000, log_interval=10, 
 
                                     callback=wandb_callback
                                 )

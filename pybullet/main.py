@@ -131,7 +131,7 @@ class SimEnv():
                 batch_size=256,
                 policy_delay=10,
                 gamma=0.99,
-                learning_rate=exponential_schedule(initial_learning_rate, decay_rate=0.5),
+                # learning_rate=exponential_schedule(initial_learning_rate, decay_rate=0.5),
                 learning_starts=0
                 )
         elif self._ctr == 'ppo':
@@ -350,7 +350,7 @@ class SimEnv():
                             # )
 
 
-                            self.model.learn(total_timesteps=2500000, log_interval=10, 
+                            self.model.learn(total_timesteps=5000000, log_interval=10, 
 
                                     callback=wandb_callback
                                 )

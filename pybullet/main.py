@@ -101,7 +101,7 @@ class SimEnv():
                 os.mkdir(path)
         elif self._ctr == "td3":
             n_actions = self._env.action_space.shape[-1]
-            action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=0.15 * np.ones(n_actions))
+            action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=0.2 * np.ones(n_actions))
 
             if not self.test_mode:
                 config = {
@@ -124,7 +124,7 @@ class SimEnv():
             self.model = TD3(
                 'MlpPolicy',# CustomMlpPolicy ,
                 self._env, 
-                # action_noise=action_noise, 
+                action_noise=action_noise, 
                 verbose=1, 
                 tensorboard_log=f"runs/{self._model_name}",
                 tau=0.005,

@@ -383,9 +383,12 @@ class SimpleNavEnv(gym.Env):
         self.reverse_path = random.randint(0,1)
         
         pos = [-7.5,-7.5,0] if not self.reverse_path else [7.5,-7.5,0]
-        oritentation = p.getQuaternionFromEuler([0,0,pi/2])
+        
+        directions = [[0,0,1,1], [0,0,0,1], [0,0,-1,1], [0,0,0,-1]]
+        d = random.randint(0,3)
+        orientation = directions[d]
 
-        return [pos, oritentation]
+        return [pos, orientation]
 
     def get_straight_env_path(self):
         cell_path = np.array([

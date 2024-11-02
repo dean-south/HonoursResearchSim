@@ -371,9 +371,9 @@ class SimEnv():
 
                             if obs[0]*16*np.sqrt(2) < 0.3:
                                 goals_reached += 1
-                            #     goal_cell = self._env.path[0]
-                            #     pose = self._env.get_pose()
-                            #     print(f'starting cell: {self.pose_to_cell(pose[:2])}, goal cell: {goal_cell}')  
+                                # goal_cell = self._env.path[0]
+                                # pose = self._env.get_pose()
+                                # print(f'starting cell: {self.pose_to_cell(pose[:2])}, goal cell: {goal_cell}')  
 
                 except KeyboardInterrupt:
                     print(' The simulation was forcibly stopped.')

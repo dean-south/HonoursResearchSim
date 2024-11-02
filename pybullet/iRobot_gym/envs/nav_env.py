@@ -63,6 +63,8 @@ class SimpleNavEnv(gym.Env):
 
         self.path = []
 
+        self.task_name = self._scenario.agent.task_name
+
         self.observation = []
         if self._scenario.agent.task_name == 'reward_rapprochement_goal':
             self._RewardFunction = RewardRapprochementGoal(

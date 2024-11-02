@@ -350,7 +350,7 @@ class SimEnv():
                             # )
 
 
-                            self.model.learn(total_timesteps=4000000, log_interval=10, 
+                            self.model.learn(total_timesteps=950000, log_interval=10, 
 
                                     callback=wandb_callback
                                 )
@@ -369,8 +369,8 @@ class SimEnv():
 
                             velocity_history = np.append(velocity_history, info['velocity'][0])
 
-                            # if sum(goal_cell==self._env.path[0])<=1:
-                            #     goals_reached += 1
+                            if obs[0]*16*np.sqrt(2) < 0.3:
+                                goals_reached += 1
                             #     goal_cell = self._env.path[0]
                             #     pose = self._env.get_pose()
                             #     print(f'starting cell: {self.pose_to_cell(pose[:2])}, goal cell: {goal_cell}')  
@@ -396,7 +396,7 @@ class SimEnv():
             if kill_sim:
                 break
             
-        if self.test_mode:
+        if self.test_mode and not kill_sim:
             print(f'velocity mean: {np.mean(velocity_history)}, velocity variance: {np.var(velocity_history)}')
             print(f'avg episode length: {np.mean(episode_lenghts)}')
             print(f'avg episode completeness: {np.mean(episode_completeness)}')
@@ -409,7 +409,7 @@ class SimEnv():
                     'number of completes, crashes, timemouts':[num_complete, num_crashes, num_timeouts]}
             
 
-            with open(f"data/{self._env._scenario.agent.task_name}_{self._ctr}.json", 'w') as outfile:
+            with open(f"data/{self._env._scenario.agent.task_name}_{self._ctr}_{args.load_model}_{self._model_name}.json", 'w') as outfile:
                 json.dump(data, outfile)
 
         self._env.close()
@@ -440,7 +440,7 @@ if __name__ == "__main__":
                         help='verbose for controller: True or False')
     parser.add_argument('--file_name', type=str,
                         default='NoveltyFitness/9/maze_nsfit9-gen38-p0', help='file name of the invidual to load if ctr=novelty')
-    parser.add_argument('--episodes', type=int, default=100,
+    parser.add_argument('--episodes', type=int, default=10,
                         help='how many training episodes')
     parser.add_argument('--model_name', type=str, default='model',
                         help='name of the model being trained')

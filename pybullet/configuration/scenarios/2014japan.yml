@@ -19,7 +19,7 @@ agents:
     sensors: [ laser]
   task:
     task_name: 2014japan
-    params: { time_limit: 30000, goal_size_detection: 0.}
+    params: { time_limit: 18000, goal_size_detection: 0.}
   starting_position: [-7.5,-7.5, 0.0]
   starting_orientation: [ 0.0, 0.0, 1.571]
  

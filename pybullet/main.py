@@ -28,7 +28,6 @@ from controllers.novelty_ctr import NoveltyController
 from controllers.RL_ctr import Agent
 from controllers.blank_ctr import BlankController
 
-
 def linear_schedule(initial_value):
     """
     Linear learning rate schedule.
@@ -52,7 +51,7 @@ load_func = {'td3':TD3.load,
             'sac':SAC.load,
             'recppo': RecurrentPPO.load,
             'tqc':TQC.load}
-
+    
 
 class SimEnv():
     """This is the main class that runs the PyBullet simulation daccording to the arguments.
@@ -69,6 +68,7 @@ class SimEnv():
     """
 
     def __init__(self):
+
         self._env = gym.make(args.env+str('-v0'), render_mode="rgb_array")
         self._sleep_time = args.sleep_time
         self._ctr = args.ctr
@@ -79,10 +79,10 @@ class SimEnv():
         self._liste_position = []
         # self._env.reset()
         self.train = args.train
-        self.test_mode = args.test_mode
-        
+        self.test_mode = args.test_mode    
 
         self.sb3_models = ['td3', "sac", 'ppo', 'recppo', 'tqc']
+
 
 
         # initialize controllers
@@ -126,7 +126,7 @@ class SimEnv():
                 self._env, 
                 action_noise=action_noise, 
                 verbose=1, 
-                tensorboard_log=f"runs/{self._model_name}",
+                # tensorboard_log=f"runs/{self._model_name}",
                 tau=0.005,
                 batch_size=256,
                 policy_delay=10,
@@ -158,7 +158,7 @@ class SimEnv():
                 'MlpPolicy', # CustomMlpPolicy,
                 self._env,
                 verbose=1,
-                tensorboard_log=f"runs/{self._model_name}",
+                # tensorboard_log=f"runs/{self._model_name}",
                 policy_kwargs=policy_kwargs
             )
         
@@ -186,7 +186,7 @@ class SimEnv():
                 'MlpPolicy', # CustomMlpPolicy,
                 self._env,
                 verbose=1,
-                tensorboard_log=f"runs/{self._model_name}",
+                # tensorboard_log=f"runs/{self._model_name}",
                 # action_noise=action_noise
                 learning_rate=exponential_schedule(initial_learning_rate, decay_rate=0.5),
                 # learning_starts=0,
@@ -216,7 +216,7 @@ class SimEnv():
                 'MlpLstmPolicy', # CustomMlpPolicy,
                 self._env,
                 verbose=1,
-                tensorboard_log=f"runs/{self._model_name}",
+                # tensorboard_log=f"runs/{self._model_name}",
                 learning_rate=exponential_schedule(initial_learning_rate, decay_rate=0.5),
             )
 
@@ -239,7 +239,7 @@ class SimEnv():
                 'MlpPolicy', # CustomMlpPolicy,
                 self._env,
                 verbose=1,
-                tensorboard_log=f"runs/{self._model_name}"
+                # tensorboard_log=f"runs/{self._model_name}"
             )
 
 
@@ -270,11 +270,11 @@ class SimEnv():
         cell_x = 0
         cell_y = 0
 
-        for i in range(16):
-            if x >= -8 + i and x < -8 + (i+1):
+        for i in range(self._env.maze_size):
+            if x >= -self._env.maze_size//2 + i and x < -self._env.maze_size//2 + (i+1):
                 cell_x = i
 
-            if y >= -8 + i and y < -8 + (i+1):
+            if y >= -self._env.maze_size//2 + i and y < -self._env.maze_size//2 + (i+1):
                 cell_y = i
 
         return [cell_x, cell_y]
@@ -306,7 +306,7 @@ class SimEnv():
 
             goals_reached = 0     
 
-            pose = self._env.get_pose()
+            pose = self._env.get_pose_env()
             goal_cell = self._env.path[0]
 
             if self.test_mode:
@@ -369,11 +369,11 @@ class SimEnv():
 
                             velocity_history = np.append(velocity_history, info['velocity'][0])
 
-                            if obs[0]*16*np.sqrt(2) < 0.3:
+                            if obs[0]*self._env.maze_size*np.sqrt(2) < 0.1:
                                 goals_reached += 1
-                                # goal_cell = self._env.path[0]
-                                # pose = self._env.get_pose()
-                                # print(f'starting cell: {self.pose_to_cell(pose[:2])}, goal cell: {goal_cell}')  
+                                goal_cell = self._env.path[0]
+                                pose = self._env.get_pose_env()
+                                print(f'starting cell: {self.pose_to_cell(pose[:2])}, goal cell: {goal_cell}')  
 
                 except KeyboardInterrupt:
                     print(' The simulation was forcibly stopped.')
@@ -419,6 +419,7 @@ def main():
     if args.model_name == args.load_model:
         print(f'Error model name must be different to load model name, {args.model_name} == {args.load_model}')
         return
+
     sim_env = SimEnv()
     sim_env.start()
     if args.save_res:
@@ -440,7 +441,7 @@ if __name__ == "__main__":
                         help='verbose for controller: True or False')
     parser.add_argument('--file_name', type=str,
                         default='NoveltyFitness/9/maze_nsfit9-gen38-p0', help='file name of the invidual to load if ctr=novelty')
-    parser.add_argument('--episodes', type=int, default=10,
+    parser.add_argument('--episodes', type=int, default=100,
                         help='how many training episodes')
     parser.add_argument('--model_name', type=str, default='model',
                         help='name of the model being trained')

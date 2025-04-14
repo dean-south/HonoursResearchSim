@@ -47,6 +47,8 @@ class World:
         else:
             p.connect(p.DIRECT)  # render False
 
+        p.setPhysicsEngineParameter(enableFileCaching=0)
+
         self._load_scene(self._config.sdf)
         self._load_goal()
         p.setTimeStep(self._config.simulation_config.time_step)

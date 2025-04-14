@@ -355,9 +355,8 @@ class Agent():
         self.target_critic_2.load_checkpoint(load_dir_path)
 
 
-    @staticmethod
-    def unnormalize(n):
-        return 16*n - 8
+    def unnormalize(self, n):
+        return self.env.maze_size*n - self.env.maze_size//2
     
     def get_desired_cell(self):
         return self.cell_path[0]
@@ -370,11 +369,11 @@ class Agent():
         cell_x = 0
         cell_y = 0
 
-        for i in range(16):
-            if x >= -8 + i and x < -8 + (i+1):
+        for i in range(self.env.maze_size):
+            if x >= -self.env.maze_size//2 + i and x < -self.env.maze_size//2 + (i+1):
                 cell_x = i
 
-            if y >= -8 + i and y < -8 + (i+1):
+            if y >= -self.env.maze_size//2 + i and y < -self.env.maze_size//2 + (i+1):
                 cell_y = i
 
         return [cell_x, cell_y]

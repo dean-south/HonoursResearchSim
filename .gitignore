@@ -374,3 +374,11 @@ data/zigzag/zigzag_td3_hr33bacq_easy_to_hard2.json
 data/zigzag/zigzag_td3_tertwb5f_easy_to_hard3.json
 models/0ucnem6i/model.zip
 models/89l8dxfy/model.zip
+avg_3_nums.py
+create_poster_graphs.ipynb
+create_table.ipynb
+/data
+/data
+/graphs
+/data
+pybullet/test.py

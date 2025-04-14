@@ -11,10 +11,23 @@
             "program": "${workspaceFolder}/pybullet/main.py",
             "console": "integratedTerminal",
             "args": [
-                "--env", "empty_gui",
-                "--ctr", "ppo",
+                // "--env", "empty_gui",
+                // "--env", "blank_gui",
+                // "--env", "2018apec_gui",
+                // "--env", "straight_gui",
+                // "--env", "training_env_gui",
+                // "--env", "2014japan_gui",
+                "--env", "cl_gui",
                 "--test_mode", "true",
-                "--load_model", "hu25t60f"
+                // "--load_model", "cpzrhl5n_0",
+                // "--load_model", "iuk4pakz_best1",
+                // "--load_model", "4un1lf8i_chpt2",
+                // "--load_model", "4ufp39ib",
+                // "--load_model", "6wp25bla",
+                "--load_model", "fhylc24o",
+                // "--ctr", "ppo"
+                "--ctr", "td3",
+                // "--ctr", "sac",
             ]
         }
     ]

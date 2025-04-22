@@ -382,7 +382,7 @@ class SimEnv():
                             ])
 
 
-                            self.model.learn(total_timesteps=10000000, log_interval=10, 
+                            self.model.learn(total_timesteps=4000000, log_interval=10, 
 
                                     callback=combined_callback
                                 )
@@ -441,7 +441,7 @@ class SimEnv():
                     'number of completes, crashes, timemouts':[num_complete, num_crashes, num_timeouts]}
             
 
-            with open(f"data/{self._env.task_name}/{self._env.task_name}_{self._ctr}_{args.load_model}_{self._model_name}.json", 'w') as outfile:
+            with open(f"data/{self._env.task_name}_{self._ctr}_{args.load_model}_{self._model_name}.json", 'w') as outfile:
                 json.dump(data, outfile)
 
         self._env.close()

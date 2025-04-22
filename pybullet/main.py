@@ -7,6 +7,7 @@ import wandb
 import json
 import csv
 from wandb.integration.sb3 import WandbCallback
+from stable_baselines3.common.callbacks import BaseCallback, CallbackList
 from stable_baselines3 import TD3, HerReplayBuffer, PPO, SAC
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 from stable_baselines3.common.noise import NormalActionNoise
@@ -17,6 +18,7 @@ from stable_baselines3.ppo import MlpPolicy
 from stable_baselines3.common.callbacks import CheckpointCallback
 from math import sin, cos, pi
 from sb3_contrib import RecurrentPPO, TQC
+from collections import deque
 
 
 from iRobot_gym.envs import SimpleNavEnv
@@ -27,6 +29,38 @@ from controllers.braitenberg import BraitenbergController
 from controllers.novelty_ctr import NoveltyController
 from controllers.RL_ctr import Agent
 from controllers.blank_ctr import BlankController
+
+class EarlyStoppingCallback(BaseCallback):
+    def __init__(self, patience=10, min_delta=1.0, window_size=100, verbose=0):
+        super().__init__(verbose)
+        self.patience = patience
+        self.min_delta = min_delta
+        self.window_size = window_size
+        self.reward_window = deque(maxlen=window_size)
+        self.best_avg = -np.inf
+        self.counter = 0
+
+    def _on_step(self) -> bool:
+        infos = self.locals.get("infos", [])
+        for info in infos:
+            if "episode" in info:
+                reward = info["episode"]["r"]
+                self.reward_window.append(reward)
+
+        if len(self.reward_window) == self.window_size:
+            current_avg = np.mean(self.reward_window)
+            if current_avg - self.best_avg > self.min_delta:
+                self.best_avg = current_avg
+                self.counter = 0
+            else:
+                self.counter += 1
+                if self.verbose:
+                    print(f"[EarlyStopping] No improvement: {self.counter}/{self.patience}")
+            if self.counter >= self.patience:
+                if self.verbose:
+                    print("[EarlyStopping] Stopping training.")
+                return False
+        return True
 
 def linear_schedule(initial_value):
     """
@@ -111,7 +145,7 @@ class SimEnv():
                 }
 
                 self.run = wandb.init(
-                    project="TD3 Maze",
+                    project="TD3 CL",
                     config=config,
                     sync_tensorboard=True,  # auto-upload sb3's tensorboard metrics
                     save_code=True,  # optional
@@ -126,7 +160,7 @@ class SimEnv():
                 self._env, 
                 action_noise=action_noise, 
                 verbose=1, 
-                # tensorboard_log=f"runs/{self._model_name}",
+                tensorboard_log=f"runs/{self._model_name}",
                 tau=0.005,
                 batch_size=256,
                 policy_delay=10,
@@ -342,17 +376,15 @@ class SimEnv():
                                 verbose=2,
                             )
 
-                            # Create a checkpoint callback to save the model
-                            # checkpoint_callback = CheckpointCallback(
-                            #     save_freq=10000,  # Save every 10000 steps
-                            #     save_path=f"./models/{self.run.id}/",
-                            #     name_prefix="rl_model"
-                            # )
+                            combined_callback = CallbackList([
+                                wandb_callback,
+                                # EarlyStoppingCallback(patience=25, min_delta=0.001, window_size=50, verbose=1)
+                            ])
 
 
-                            self.model.learn(total_timesteps=4000000, log_interval=10, 
+                            self.model.learn(total_timesteps=10000000, log_interval=10, 
 
-                                    callback=wandb_callback
+                                    callback=combined_callback
                                 )
                             self.run.finish()
                         else:

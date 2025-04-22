@@ -10,6 +10,7 @@ from numpy import dot
 from .scenarios import SimpleNavScenario
 from .camera import CameraController
 from iRobot_gym.envs.training_env import set_constrained_env
+from collections import deque
 
 
 
@@ -30,8 +31,8 @@ class SimpleNavEnv(gym.Env):
         if scenario.agent.task_name == 'cl':
             self.maze_id = 0
             self.maze_size = 16
-            self.wall_prob = -0.05
-            self.show_walls = False
+            self.wall_prob = 0
+            self.show_walls = True
             self.maze = set_constrained_env(self.maze_size, self.wall_prob, self.show_walls)
         else:
             self.maze_size = 16
@@ -40,6 +41,8 @@ class SimpleNavEnv(gym.Env):
         self._scenario = scenario
         self._initialized = False
         self._time = 1
+        self.Return = 0
+        self.dist_tol = 0.3
         self.render_mode = render_mode
 
         self.action_space = spaces.Box(low=-1, high=1, shape=(2,), dtype=float)
@@ -49,6 +52,9 @@ class SimpleNavEnv(gym.Env):
         self.path = []
 
         self.task_name = self._scenario.agent.task_name
+
+        self.total_returns = deque(maxlen=10)
+        self.total_times = deque(maxlen=10)
 
         self.observation = []
         if self._scenario.agent.task_name == 'reward_rapprochement_goal':
@@ -129,11 +135,13 @@ class SimpleNavEnv(gym.Env):
 
         reward = self._RewardFunction.reward(self._scenario.agent.id, state)
 
+        self.Return += reward
+
         dist = self.get_pose(self.path, state[self._scenario.agent.id])[0]*self.maze_size*sqrt(2)
        
         current_cell = self.pos2cell(*state[self._scenario.agent.id]['pose'][:2])
         done = self._RewardFunction.done(self._scenario.agent.id, state)
-        if dist < 0.1:
+        if dist < self.dist_tol/(self.maze_size*sqrt(2)):
             self.path = np.delete(self.path,0,axis=0)
             if len(self.path) == 0:
                 self.path = self.get_path()
@@ -158,15 +166,28 @@ class SimpleNavEnv(gym.Env):
             else:
                 self._scenario.agent.reset(self.get_start_pose())
         else:
+
+            self.total_returns.append(self.Return/self._time)
+            self.total_times.append(self._time)
+
             if self._scenario.agent.task_name == 'cl':
+
+                if np.mean(self.total_returns) > 0.7 and np.mean(self.total_times) > 9000:
+
+                    self.total_returns = deque(maxlen=10)
+                    self.total_times = deque(maxlen=10)
+                    
+                    self.wall_prob += 0.05 * self.show_walls if self.wall_prob < 0.5 else 0
+                    self.show_walls = True
+                    self.maze_size = 64
+
+                    print(f'Maze Size:{self.maze_size} Wall Probability:{self.wall_prob}, Show Walls:{self.show_walls}')
+
+                    p.removeBody(self.maze_id)
+                    self.maze = set_constrained_env(self.maze_size, self.wall_prob, self.show_walls)
+                    self.maze_id = p.loadURDF("pybullet/models/scenes/cl/cl.urdf")
                 
-                p.removeBody(self.maze_id)
-                self.maze_size = 16
-                self.wall_prob += 0.05
-                self.show_walls = True
-                self.maze = set_constrained_env(self.maze_size, self.wall_prob,self.show_walls)
-                # flags = p.URDF_USE_INERTIA_FROM_FILE | p.URDF_USE_SELF_COLLISION
-                self.maze_id = p.loadURDF("pybullet/models/scenes/cl/cl.urdf")
+                
 
             self._scenario.world.reset()
             self._scenario.agent.reset(self.get_start_pose())
@@ -179,6 +200,7 @@ class SimpleNavEnv(gym.Env):
         self.path = self.get_path()
 
         self._time = 1
+        self.Return = 0
 
 
         
@@ -214,7 +236,7 @@ class SimpleNavEnv(gym.Env):
 
         target = cell + np.array([-(self.maze_size/2 - 0.5),-(self.maze_size/2 - 0.5)])
 
-        pos_ = np.linalg.norm([pos - target])/(((self.maze_size//2)**2)*sqrt(2))
+        pos_ = np.linalg.norm([pos - target])/(self.maze_size*sqrt(2))
 
         if (pos[0]-target[0] == 0):
             theta_ = pi/2 if target[1] > pos[1] else -pi/2
@@ -240,8 +262,6 @@ class SimpleNavEnv(gym.Env):
         laserRanges = laserRanges[range(0,len(laserRanges),2)]
 
         pose = self.get_pose(self.path, state)
-
-        dist_to_obj, angle_to_obj = self.get_laser_obs_space()
         
         obs = [ pose[0],
                 self.normalise_theta(pose[1]),
@@ -501,9 +521,9 @@ class SimpleNavEnv(gym.Env):
         return cell_path[1:]
     
     def get_cl_start_pose(self):
-        maze_walls = np.flip(self.maze,0)
 
         if self.show_walls:
+            maze_walls = np.flip(self.maze,0)
             valid_start = False
             
             while not valid_start:
@@ -600,13 +620,13 @@ class SimpleNavEnv(gym.Env):
     
     @staticmethod
     def normalise_theta(theta):
-        theta = (theta + pi)/(2*pi) 
+        theta /= pi 
 
         return theta
 
     @staticmethod
     def normalise_v(v_x):
-        v_x = (v_x + 0.7)/(1.4)
+        v_x /= 0.62
 
         return v_x
 
@@ -670,11 +690,11 @@ class RewardCarryOn:
         v_x = state['velocity'][0]
 
         # reward = - distance to goal - relative orientation to goal + forward velocity - wall proximity
-        reward = - 0*dist - 1.*abs(phi)/pi + 1*self.env.normalise_v(v_x) - 1*self.env.get_obj_dist()/(0.3)
+        reward = - 0*dist - 1*abs(phi)/pi + 1*self.env.normalise_v(v_x) - 1*self.env.get_obj_dist()/(0.3)
 
         # if (len(self.env.path) and sum(current_cell == self.env.path[0])>1) or not len(self.env.path):
         #     reward = 150
-        if dist < 0.1/(self.env.maze_size*sqrt(2)):
+        if dist < self.env.dist_tol/(self.env.maze_size*sqrt(2)):
             reward += 200
 
         elif self.env.robot_collision():

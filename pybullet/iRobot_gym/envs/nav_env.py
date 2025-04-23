@@ -173,6 +173,8 @@ class SimpleNavEnv(gym.Env):
 
                 if np.mean(self.total_returns) > 0.7 and np.mean(self.total_times) > self._scenario.agent.task_param['time_limit']*0.9:
 
+                    print(f'Average reward per time:{np.mean(self.total_returns)}, Average Time per episode:{np.mean(self.total_times)}')
+
                     self.total_returns = deque(maxlen=10)
                     self.total_times = deque(maxlen=10)
 
@@ -189,12 +191,8 @@ class SimpleNavEnv(gym.Env):
                     self.maze = set_constrained_env(self.maze_size, self.wall_prob, self.show_walls)
                     self.maze_id = p.loadURDF("pybullet/models/scenes/cl/cl.urdf")
                 
-                
-
             self._scenario.world.reset()
             self._scenario.agent.reset(self.get_start_pose())
-
-        
         
         self._scenario.world.update(agent_id=self._scenario.agent.id)
         self._RewardFunction.reset()

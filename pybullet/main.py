@@ -401,7 +401,7 @@ class SimEnv():
 
                             velocity_history = np.append(velocity_history, info['velocity'][0])
 
-                            if obs[0]*self._env.maze_size*np.sqrt(2) < 0.1:
+                            if obs[0]*self._env.maze_size*np.sqrt(2) < self._env.dist_tol:
                                 goals_reached += 1
                                 goal_cell = self._env.path[0]
                                 pose = self._env.get_pose_env()

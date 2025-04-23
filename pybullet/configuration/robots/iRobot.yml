@@ -13,9 +13,9 @@ sensors:
     frequency: 100
     params:
       inaccuracy: 0.00
-      rays: 20 #number of lasers
+      rays: 8 #number of lasers
       range: 0.5  #range of the lasers
       min_range: 0 
       angle_start: -90 # degree
-      angle: 180 #degree
+      angle: 360 #degree
       visible: True 

@@ -190,18 +190,24 @@ class SimEnv():
                 
             initial_learning_rate = 0.0003
 
-            policy_kwargs = dict(net_arch=[100, 100])
+            # policy_kwargs = dict(net_arch=[100, 100])
+            policy_kwargs = dict(net_arch=[dict(pi=[256, 256], vf=[256, 256])])
+
                 
             self.model = PPO(
                 'MlpPolicy', # CustomMlpPolicy,
                 self._env,
                 verbose=1,
                 tensorboard_log=f"runs/{self._model_name}",
+                learning_rate=3e-4,
+                n_steps=2048,
+                batch_size=64,
+                n_epochs=10,
+                gamma=0.99,
+                gae_lambda=0.95,
+                clip_range=0.2,
+                ent_coef=0.01,
                 policy_kwargs=policy_kwargs,
-                clip_range=0.25,
-                gae_lambda=0.9,
-                batch_size=4096,
-                gamma=0.999
             )
         
         elif self._ctr == 'sac':

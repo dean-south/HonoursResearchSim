@@ -32,7 +32,7 @@ class SimpleNavEnv(gym.Env):
             self.maze_id = 0
             self.maze_size = 16
             self.wall_prob = 0
-            self.show_walls = False
+            self.show_walls = True
             self.alt_goal = False
             self.maze = set_constrained_env(self.maze_size, self.wall_prob, self.show_walls)
         else:

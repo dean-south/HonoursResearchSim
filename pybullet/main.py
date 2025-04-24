@@ -161,12 +161,16 @@ class SimEnv():
                 action_noise=action_noise, 
                 verbose=1, 
                 tensorboard_log=f"runs/{self._model_name}",
+                buffer_size=1000000,
+                learning_rate=10000,
+                gradient_steps=100,
                 tau=0.005,
                 batch_size=256,
-                policy_delay=10,
+                policy_delay=2,
                 gamma=0.99,
+                target_policy_noise=0.2,
+                target_noise_clip=0.5,
                 # learning_rate=exponential_schedule(initial_learning_rate, decay_rate=0.5),
-                learning_starts=0
                 )
         elif self._ctr == 'ppo':
 

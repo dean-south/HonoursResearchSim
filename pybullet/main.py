@@ -186,18 +186,22 @@ class SimEnv():
                         config=config,
                         sync_tensorboard=True,  # auto-upload sb3's tensorboard metrics
                         save_code=True,  # optional
-                    )
+                    )   
                 
             initial_learning_rate = 0.0003
 
-            policy_kwargs = dict(net_arch=[128, 128])
+            policy_kwargs = dict(net_arch=[100, 100])
                 
             self.model = PPO(
                 'MlpPolicy', # CustomMlpPolicy,
                 self._env,
                 verbose=1,
-                # tensorboard_log=f"runs/{self._model_name}",
-                policy_kwargs=policy_kwargs
+                tensorboard_log=f"runs/{self._model_name}",
+                policy_kwargs=policy_kwargs,
+                clip_range=0.25,
+                gae_lambda=0.9,
+                batch_size=4096,
+                gamma=0.999
             )
         
         elif self._ctr == 'sac':
@@ -212,7 +216,7 @@ class SimEnv():
                 }
 
                 self.run = wandb.init(
-                        project="SAC Maze",
+                        project="SAC CL",
                         config=config,
                         sync_tensorboard=True,  # auto-upload sb3's tensorboard metrics
                         save_code=True,  # optional
@@ -224,7 +228,7 @@ class SimEnv():
                 'MlpPolicy', # CustomMlpPolicy,
                 self._env,
                 verbose=1,
-                # tensorboard_log=f"runs/{self._model_name}",
+                tensorboard_log=f"runs/{self._model_name}",
                 # action_noise=action_noise
                 learning_rate=exponential_schedule(initial_learning_rate, decay_rate=0.5),
                 # learning_starts=0,

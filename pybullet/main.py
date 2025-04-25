@@ -162,7 +162,7 @@ class SimEnv():
                 verbose=1, 
                 tensorboard_log=f"runs/{self._model_name}",
                 buffer_size=1000000,
-                learning_rate=10000,
+                learning_starts=10000,
                 gradient_steps=1,
                 tau=0.005,
                 batch_size=256,

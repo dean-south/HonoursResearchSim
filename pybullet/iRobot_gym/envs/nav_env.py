@@ -171,7 +171,7 @@ class SimpleNavEnv(gym.Env):
 
             if self._scenario.agent.task_name == 'cl':
 
-                if np.mean(self.total_returns) > 0.7 and np.mean(self.total_times) > self._scenario.agent.task_param['time_limit']*0.9:
+                if np.mean(self.total_returns) > 0.6 and np.mean(self.total_times) > self._scenario.agent.task_param['time_limit']*0.8:
 
                     print(f'Average reward per time:{np.mean(self.total_returns)}, Average Time per episode:{np.mean(self.total_times)}')
 
@@ -181,7 +181,7 @@ class SimpleNavEnv(gym.Env):
                     if self.wall_prob >= 0.5:
                         self.alt_goal = True
                     
-                    self.wall_prob += 0.05 * self.show_walls if self.wall_prob < 0.5 else 0
+                    self.wall_prob += 0.125 * self.show_walls if self.wall_prob < 0.5 else 0
                     self.show_walls = True
                     self.maze_size = 16
 

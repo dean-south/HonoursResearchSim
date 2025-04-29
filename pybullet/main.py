@@ -182,7 +182,7 @@ class SimEnv():
                 }
 
                 self.run = wandb.init(
-                        project="PPO Maze",
+                        project="PPO CL",
                         config=config,
                         sync_tensorboard=True,  # auto-upload sb3's tensorboard metrics
                         save_code=True,  # optional

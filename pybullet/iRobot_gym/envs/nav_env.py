@@ -43,7 +43,7 @@ class SimpleNavEnv(gym.Env):
         self._initialized = False
         self._time = 1
         self.Return = 0
-        self.dist_tol = 0.1 #Make robot have 8 lasers decrease in reset
+        self.dist_tol = 0.3 #Make robot have 8 lasers decrease in reset
         self.render_mode = render_mode
 
         self.action_space = spaces.Box(low=-1, high=1, shape=(2,), dtype=float)

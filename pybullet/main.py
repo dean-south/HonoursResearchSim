@@ -201,7 +201,7 @@ class SimEnv():
                 tensorboard_log=f"runs/{self._model_name}",
                 learning_rate=3e-4,
                 n_steps=2048,
-                batch_size=64,
+                batch_size=128,
                 n_epochs=10,
                 gamma=0.99,
                 gae_lambda=0.95,

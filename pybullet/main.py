@@ -161,15 +161,15 @@ class SimEnv():
                 action_noise=action_noise, 
                 verbose=1, 
                 tensorboard_log=f"runs/{self._model_name}",
-                buffer_size=1000000,
-                learning_starts=10000,
-                gradient_steps=2,
-                tau=0.005,
+                learning_rate=3e-4,
+                buffer_size=1_000_000,
+                learning_starts=10_000,
                 batch_size=256,
-                policy_delay=2,
+                tau=0.005,
                 gamma=0.99,
-                target_policy_noise=0.2,
-                target_noise_clip=0.5,
+                train_freq=(100, "step"),
+                gradient_steps=100,
+                policy_delay=2,
                 # learning_rate=exponential_schedule(initial_learning_rate, decay_rate=0.5),
                 )
         elif self._ctr == 'ppo':
@@ -199,7 +199,7 @@ class SimEnv():
                 self._env,
                 verbose=1,
                 tensorboard_log=f"runs/{self._model_name}",
-                learning_rate=3e-4,
+                learning_rate=1e-4,
                 n_steps=2048,
                 batch_size=128,
                 n_epochs=10,
@@ -211,8 +211,8 @@ class SimEnv():
             )
         
         elif self._ctr == 'sac':
-            n_actions = self._env.action_space.shape[-1]
-            action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=0.05 * np.ones(n_actions))
+            # n_actions = self._env.action_space.shape[-1]
+            # action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=0.2 * np.ones(n_actions))
 
             if not self.test_mode:
                 config = {
@@ -228,15 +228,18 @@ class SimEnv():
                         save_code=True,  # optional
                     )
                 
-            initial_learning_rate = 0.0003
+            # initial_learning_rate = 0.0003
+
+            policy_kwargs = dict(net_arch=dict(pi=[256, 256], qf=[256, 256]))
 
             self.model = SAC(
                 'MlpPolicy', # CustomMlpPolicy,
                 self._env,
                 verbose=1,
                 tensorboard_log=f"runs/{self._model_name}",
-                # action_noise=action_noise
-                learning_rate=exponential_schedule(initial_learning_rate, decay_rate=0.5),
+                policy_kwargs=policy_kwargs,
+                # action_noise=action_noise,
+                # learning_rate=exponential_schedule(initial_learning_rate, decay_rate=0.5),
                 # learning_starts=0,
                 # target_update_interval=10
             )

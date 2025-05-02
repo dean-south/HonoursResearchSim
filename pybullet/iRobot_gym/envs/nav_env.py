@@ -630,7 +630,7 @@ class SimpleNavEnv(gym.Env):
 
     @staticmethod
     def normalise_v(v_x):
-        v_x = (v_x + 0.7)/(1.4)
+        v_x = ((v_x + 0.62)/(1.24))  
 
         return v_x
 
@@ -694,7 +694,7 @@ class RewardCarryOn:
         v_x = state['velocity'][0]
 
         # reward = - distance to goal - relative orientation to goal + forward velocity - wall proximity
-        reward = - 0*dist - 1*abs(phi)/pi + 1*self.env.normalise_v(v_x) - 1*self.env.get_obj_dist()/(0.3)
+        reward = - 1*abs(phi)/pi + 1*(self.env.normalise_v(v_x)*2-1) - 1*self.env.get_obj_dist()/(0.3)
 
         # if (len(self.env.path) and sum(current_cell == self.env.path[0])>1) or not len(self.env.path):
         #     reward = 150

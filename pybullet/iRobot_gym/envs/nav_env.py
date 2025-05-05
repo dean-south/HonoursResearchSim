@@ -28,12 +28,12 @@ fix_path_tasks = ['2018apec', 'training_env', 'straight_env', '2014japan', '2010
 class SimpleNavEnv(gym.Env):
 
     def __init__(self, scenario, render_mode='rgb_array'):
-        if scenario.agent.task_name == 'cl':
+        if scenario.agent.task_name == 'cl_const' or scenario.agent.task_name == 'cl_move':
             self.maze_id = 0
             self.maze_size = 16
-            self.wall_prob = 0
+            self.wall_prob = 0.45
             self.show_walls = True
-            self.alt_goal = False
+            self.alt_goal = False if scenario.agent.task_name == 'cl_const' else True
             self.maze = set_constrained_env(self.maze_size, self.wall_prob, self.show_walls)
         else:
             self.maze_size = 16
@@ -43,7 +43,7 @@ class SimpleNavEnv(gym.Env):
         self._initialized = False
         self._time = 1
         self.Return = 0
-        self.dist_tol = 0.3 #Make robot have 8 lasers decrease in reset
+        self.dist_tol = 0.1 #Make robot have 8 lasers decrease in reset
         self.render_mode = render_mode
 
         self.action_space = spaces.Box(low=-1, high=1, shape=(2,), dtype=float)
@@ -113,7 +113,7 @@ class SimpleNavEnv(gym.Env):
             self.reverse_path = False
             self.get_start_pose = self.get_straight_start_pose
             self.get_path = self.get_straight_env_path
-        elif self._scenario.agent.task_name == 'cl':
+        elif any(self._scenario.agent.task_name == name for name in ['cl', 'cl_const', 'cl_move']):
             self._RewardFunction = RewardCarryOn(
                 self._scenario.agent.task_param, self)
             self.get_start_pose = self.get_cl_start_pose
@@ -169,27 +169,28 @@ class SimpleNavEnv(gym.Env):
             self.total_returns.append(self.Return/self._time)
             self.total_times.append(self._time)
 
-            if self._scenario.agent.task_name == 'cl':
+            if self._scenario.agent.task_name == 'cl_const':
 
-                if np.mean(self.total_returns) > 0.6 and np.mean(self.total_times) > self._scenario.agent.task_param['time_limit']*0.8:
+                # if np.mean(self.total_returns) > 0.6 and np.mean(self.total_times) > self._scenario.agent.task_param['time_limit']*0.8:
 
-                    print(f'Average reward per time:{np.mean(self.total_returns)}, Average Time per episode:{np.mean(self.total_times)}')
+                #     print(f'Average reward per time:{np.mean(self.total_returns)}, Average Time per episode:{np.mean(self.total_times)}')
 
-                    self.total_returns = deque(maxlen=10)
-                    self.total_times = deque(maxlen=10)
-
-                    if self.wall_prob >= 0.5:
-                        self.alt_goal = True
+                #     self.total_returns = deque(maxlen=10)
+                #     self.total_times = deque(maxlen=10)
                     
-                    self.wall_prob += 0.125 * self.show_walls if self.wall_prob < 0.5 else 0
-                    self.show_walls = True
-                    self.maze_size = 16
+                #     self.wall_prob += 0.125 * self.show_walls if self.wall_prob < 0.5 else 0
+                #     self.show_walls = True
+                #     self.maze_size = 16
 
-                    print(f'Maze Size:{self.maze_size} Wall Probability:{self.wall_prob}, Show Walls:{self.show_walls}')
+                #     print(f'Maze Size:{self.maze_size} Wall Probability:{self.wall_prob}, Show Walls:{self.show_walls}')
 
-                    p.removeBody(self.maze_id)
-                    self.maze = set_constrained_env(self.maze_size, self.wall_prob, self.show_walls)
-                    self.maze_id = p.loadURDF("pybullet/models/scenes/cl/cl.urdf")
+                #     p.removeBody(self.maze_id)
+                #     self.maze = set_constrained_env(self.maze_size, self.wall_prob, self.show_walls)
+                #     self.maze_id = p.loadURDF("pybullet/models/scenes/cl/cl.urdf")
+
+                p.removeBody(self.maze_id)
+                self.maze = set_constrained_env(self.maze_size, self.wall_prob, self.show_walls)
+                self.maze_id = p.loadURDF("pybullet/models/scenes/cl/cl.urdf")
                 
             self._scenario.world.reset()
             self._scenario.agent.reset(self.get_start_pose())

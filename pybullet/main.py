@@ -423,6 +423,8 @@ class SimEnv():
 
                             if args.env == 'empty' or args.env == 'empty_gui':
                                 time_steps = 950000
+                            elif args.env[:8] == 'cl_const':
+                                time_steps = 5000000
                             else:
                                 time_steps = 10000000
 
@@ -450,7 +452,7 @@ class SimEnv():
                                 goals_reached += 1
                                 goal_cell = self._env.path[0]
                                 pose = self._env.get_pose_env()
-                                print(f'starting cell: {self.pose_to_cell(pose[:2])}, goal cell: {goal_cell}')  
+                                # print(f'starting cell: {self.pose_to_cell(pose[:2])}, goal cell: {goal_cell}')  
 
                 except KeyboardInterrupt:
                     print(' The simulation was forcibly stopped.')
@@ -479,15 +481,15 @@ class SimEnv():
             print(f'avg episode completeness: {np.mean(episode_completeness)}')
             print(f'number of completes: {num_complete}, number of crashes {num_crashes}, number of timeouts {num_timeouts}')
 
-            data = {"velocity mean": np.mean(velocity_history),
-                    'velocity variance': np.var(velocity_history),
-                    'avg episode length': np.mean(episode_lenghts),
-                    'avg episode completeness': np.mean(episode_completeness),
-                    'number of completes, crashes, timemouts':[num_complete, num_crashes, num_timeouts]}
+            # data = {"velocity mean": np.mean(velocity_history),
+            #         'velocity variance': np.var(velocity_history),
+            #         'avg episode length': np.mean(episode_lenghts),
+            #         'avg episode completeness': np.mean(episode_completeness),
+            #         'number of completes, crashes, timemouts':[num_complete, num_crashes, num_timeouts]}
             
 
-            with open(f"data/{self._env.task_name}/{self._env.task_name}_{self._ctr}_{args.load_model}_{self._model_name}.json", 'w') as outfile:
-                json.dump(data, outfile)
+            # with open(f"data/{self._env.task_name}/{self._env.task_name}_{self._ctr}_{args.load_model}_{self._model_name}.json", 'w') as outfile:
+            #     json.dump(data, outfile)
 
         self._env.close()
 

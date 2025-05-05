@@ -61,6 +61,29 @@ class EarlyStoppingCallback(BaseCallback):
                     print("[EarlyStopping] Stopping training.")
                 return False
         return True
+    
+class EarlyStopOnMetricsCallback(BaseCallback):
+    def __init__(self, length_threshold, ratio_threshold, verbose=0):
+        super().__init__(verbose)
+        self.length_threshold = length_threshold
+        self.ratio_threshold = ratio_threshold
+
+    def _on_step(self) -> bool:
+        # Access the logger's values
+        ep_len_mean = self.logger.name_to_value.get("rollout/ep_len_mean")
+        ep_rew_mean = self.logger.name_to_value.get("rollout/ep_rew_mean")
+
+        if ep_len_mean is not None and ep_rew_mean is not None:
+            if ep_len_mean > self.length_threshold:
+                reward_to_length_ratio = ep_rew_mean / ep_len_mean
+                if reward_to_length_ratio > self.ratio_threshold:
+                    if self.verbose > 0:
+                        print(f"Early stopping triggered: ep_len_mean={ep_len_mean:.2f}, "
+                              f"ep_rew_mean={ep_rew_mean:.2f}, "
+                              f"ratio={reward_to_length_ratio:.2f}")
+                    return False  # Returning False stops training
+
+        return True
 
 def linear_schedule(initial_value):
     """
@@ -395,11 +418,16 @@ class SimEnv():
 
                             combined_callback = CallbackList([
                                 wandb_callback,
-                                # EarlyStoppingCallback(patience=25, min_delta=0.001, window_size=50, verbose=1)
+                                EarlyStopOnMetricsCallback(0.5,self._env._scenario.agent.task_param['time_limit']*0.8)
                             ])
 
+                            if args.env == 'empty' or args.env == 'empty_gui':
+                                time_steps = 950000
+                            else:
+                                time_steps = 10000000
 
-                            self.model.learn(total_timesteps=10000000, log_interval=10, 
+
+                            self.model.learn(total_timesteps=time_steps, log_interval=10, 
 
                                     callback=combined_callback
                                 )

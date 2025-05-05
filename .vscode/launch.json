@@ -19,15 +19,15 @@
                 // "--env", "2014japan_gui",
                 "--env", "cl_gui",
                 "--test_mode", "true",
-                // "--load_model", "rabaith7",
+                "--load_model", "wf8igabn",
                 // "--load_model", "iuk4pakz_best1",
                 // "--load_model", "4un1lf8i_chpt2",
                 // "--load_model", "4ufp39ib",
                 // "--load_model", "6wp25bla",
                 // "--load_model", "fhylc24o",
                 // "--ctr", "ppo"
-                "--ctr", "td3",
-                // "--ctr", "sac",
+                // "--ctr", "td3",
+                "--ctr", "sac",
             ]
         }
     ]

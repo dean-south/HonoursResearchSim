@@ -418,7 +418,7 @@ class SimEnv():
 
                             combined_callback = CallbackList([
                                 wandb_callback,
-                                EarlyStopOnMetricsCallback(0.5,self._env._scenario.agent.task_param['time_limit']*0.8)
+                                EarlyStopOnMetricsCallback(0.5,7000)
                             ])
 
                             if args.env == 'empty' or args.env == 'empty_gui':

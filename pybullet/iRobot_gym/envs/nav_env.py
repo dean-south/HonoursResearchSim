@@ -555,7 +555,7 @@ class SimpleNavEnv(gym.Env):
             x = -((self.maze_size-1)//2) + j//2
             y = (self.maze_size-1)//2 - i//2
 
-            x = x - np.sign(x)*0.5 if x != 0 else x + 0.5
+            x = x - 0.5
             y = y - np.sign(y)*0.5 if y != 0 else y + 0.5
 
             pos = [x,y,0]

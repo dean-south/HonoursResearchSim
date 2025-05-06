@@ -17,17 +17,17 @@
                 // "--env", "straight_gui",
                 // "--env", "training_env_gui",
                 // "--env", "2014japan_gui",
-                "--env", "cl_gui",
+                "--env", "cl_const_gui",
                 "--test_mode", "true",
-                "--load_model", "wf8igabn",
+                "--load_model", "c5siz6xi",
                 // "--load_model", "iuk4pakz_best1",
                 // "--load_model", "4un1lf8i_chpt2",
                 // "--load_model", "4ufp39ib",
                 // "--load_model", "6wp25bla",
                 // "--load_model", "fhylc24o",
                 // "--ctr", "ppo"
-                // "--ctr", "td3",
-                "--ctr", "sac",
+                "--ctr", "td3",
+                // "--ctr", "sac",
             ]
         }
     ]

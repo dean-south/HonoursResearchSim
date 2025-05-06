@@ -577,40 +577,46 @@ class SimpleNavEnv(gym.Env):
 
         cell_path = []
 
-        direction = random.randint(0,3)
+        while True:
 
-        d_x = int(sin(direction * pi/2))
-        d_y = int(cos(direction * pi/2))
+            direction = random.randint(0,3)
 
-        dist = random.randint(1,self.maze_size-1)
+            d_x = int(sin(direction * pi/2))
+            d_y = int(cos(direction * pi/2))
 
-        des_cell = [int(curr_cell[0] + d_x*dist), int(curr_cell[1] + d_y*dist)]
+            dist = random.randint(1,self.maze_size-1)
 
-        if des_cell[0] < 0:
-            des_cell[0] = 0
-        elif des_cell[0] > self.maze_size-1:
-            des_cell[0] = self.maze_size-1
+            des_cell = [int(curr_cell[0] + d_x*dist), int(curr_cell[1] + d_y*dist)]
+
+
+            if des_cell[0] < 0:
+                des_cell[0] = 0
+            elif des_cell[0] > self.maze_size-1:
+                des_cell[0] = self.maze_size-1
+                
+            if des_cell[1] < 0:
+                des_cell[1] = 0
             
-        if des_cell[1] < 0:
-            des_cell[1] = 0
-        
-        elif des_cell[1] > self.maze_size-1:
-            des_cell[1] = self.maze_size-1
+            elif des_cell[1] > self.maze_size-1:
+                des_cell[1] = self.maze_size-1
 
-        if self.show_walls:
-            if abs(d_x) > 0:
-                for x in range(curr_cell[0], des_cell[0], d_x):
-                    if self.maze[2*des_cell[1], 2*x + d_x]:
-                        des_cell[0] = x 
-                        break
-            elif abs(d_y) > 0:
-                for y in range(curr_cell[1], des_cell[1], d_y):
-                    if self.maze[2*y + d_y, 2*des_cell[0]]:
-                        des_cell[1] = y 
-                        break
+            if self.show_walls:
+                if abs(d_x) > 0:
+                    for x in range(curr_cell[0], des_cell[0], d_x):
+                        if self.maze[2*des_cell[1], 2*x + d_x]:
+                            des_cell[0] = x 
+                            break
+                elif abs(d_y) > 0:
+                    for y in range(curr_cell[1], des_cell[1], d_y):
+                        if self.maze[2*y + d_y, 2*des_cell[0]]:
+                            des_cell[1] = y 
+                            break
 
-        if self.alt_goal:
-            des_cell += [random.random()/2.5 - 0.2, random.random()/2.5 - 0.2]
+            if self.alt_goal:
+                des_cell += [random.random()/2.5 - 0.2, random.random()/2.5 - 0.2]
+
+            if des_cell != curr_cell:
+                break
 
         cell_path.append(des_cell)
 

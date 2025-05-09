@@ -605,12 +605,12 @@ class SimpleNavEnv(gym.Env):
                 if abs(d_x) > 0:
                     for x in range(curr_cell[0], des_cell[0], d_x):
                         if self.maze[2*des_cell[1], 2*x + d_x]:
-                            des_cell[0] = random.randint(min(curr_cell[0]+d_x,x), max(curr_cell[0]+d_x,x))
+                            des_cell[0] = random.randint(min(curr_cell[0],x), max(curr_cell[0],x))
                             break
                 elif abs(d_y) > 0:
                     for y in range(curr_cell[1], des_cell[1], d_y):
                         if self.maze[2*y + d_y, 2*des_cell[0]]:
-                            des_cell[1] = random.randint(min(curr_cell[1]+d_y,y), max(curr_cell[1]+d_y,y)) 
+                            des_cell[1] = random.randint(min(curr_cell[1],y), max(curr_cell[1],y)) 
                             break
 
             if self.alt_goal:

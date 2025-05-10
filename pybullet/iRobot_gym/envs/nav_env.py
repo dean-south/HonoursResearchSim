@@ -31,7 +31,7 @@ class SimpleNavEnv(gym.Env):
         if scenario.agent.task_name == 'cl_const' or scenario.agent.task_name == 'cl_move':
             self.maze_id = 0
             self.maze_size = 16
-            self.wall_prob = 0.45
+            self.wall_prob = 0.0
             self.show_walls = True
             self.alt_goal = False if scenario.agent.task_name == 'cl_const' else True
             self.maze = set_constrained_env(self.maze_size, self.wall_prob, self.show_walls)
@@ -187,6 +187,8 @@ class SimpleNavEnv(gym.Env):
                 #     p.removeBody(self.maze_id)
                 #     self.maze = set_constrained_env(self.maze_size, self.wall_prob, self.show_walls)
                 #     self.maze_id = p.loadURDF("pybullet/models/scenes/cl/cl.urdf")
+
+                self.wall_prob = min(self.wall_prob+0.001, 0.45)
 
                 p.removeBody(self.maze_id)
                 self.maze = set_constrained_env(self.maze_size, self.wall_prob, self.show_walls)

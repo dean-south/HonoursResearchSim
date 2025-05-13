@@ -188,7 +188,7 @@ class SimpleNavEnv(gym.Env):
                 #     self.maze = set_constrained_env(self.maze_size, self.wall_prob, self.show_walls)
                 #     self.maze_id = p.loadURDF("pybullet/models/scenes/cl/cl.urdf")
 
-                self.wall_prob = min(self.wall_prob+0.001, 0.45)
+                self.wall_prob = random.random()/2
 
                 p.removeBody(self.maze_id)
                 self.maze = set_constrained_env(self.maze_size, self.wall_prob, self.show_walls)
@@ -704,7 +704,7 @@ class RewardCarryOn:
         v_x = state['velocity'][0]
 
         # reward = - distance to goal - relative orientation to goal + forward velocity - wall proximity
-        reward = - 1*abs(phi)/pi + 1*(self.env.normalise_v(v_x)*2-1) - 1*self.env.get_obj_dist()/(0.3)
+        reward = - 1*abs(phi)/pi + 1*(self.env.normalise_v(v_x)*2-1) - 0*self.env.get_obj_dist()/(0.3)
 
         # if (len(self.env.path) and sum(current_cell == self.env.path[0])>1) or not len(self.env.path):
         #     reward = 150

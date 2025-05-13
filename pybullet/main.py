@@ -452,7 +452,7 @@ class SimEnv():
                                 goals_reached += 1
                                 goal_cell = self._env.path[0]
                                 pose = self._env.get_pose_env()
-                                print(f'starting cell: {self.pose_to_cell(pose[:2])}, goal cell: {goal_cell}')  
+                                # print(f'starting cell: {self.pose_to_cell(pose[:2])}, goal cell: {goal_cell}')  
 
                 except KeyboardInterrupt:
                     print(' The simulation was forcibly stopped.')

@@ -426,7 +426,7 @@ class SimEnv():
                             elif args.env[:8] == 'cl_const':
                                 time_steps = 5000000
                             else:
-                                time_steps = 2000000
+                                time_steps = 4000000
 
 
                             self.model.learn(total_timesteps=time_steps, log_interval=10, 

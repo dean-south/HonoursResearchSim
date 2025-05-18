@@ -33,7 +33,7 @@ class SimpleNavEnv(gym.Env):
             self.maze_size = 16
             self.wall_prob = 0.0
             self.show_walls = True
-            self.alt_goal = False if scenario.agent.task_name == 'cl_const' else True
+            self.alt_goal = not scenario.agent.task_name == 'cl_const'
             self.maze = set_constrained_env(self.maze_size, self.wall_prob, self.show_walls)
         else:
             self.maze_size = 16
@@ -616,7 +616,7 @@ class SimpleNavEnv(gym.Env):
                             break
 
             if self.alt_goal:
-                des_cell += [random.random()/2.5 - 0.2, random.random()/2.5 - 0.2]
+                des_cell += np.array([random.random()/2.5 - 0.2, random.random()/2.5 - 0.2])
 
             if des_cell != curr_cell:
                 break

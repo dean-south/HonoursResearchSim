@@ -576,7 +576,7 @@ class SimpleNavEnv(gym.Env):
 
     def get_cl_path(self):
         state = self._scenario.world.state()[self._scenario.agent.id] 
-        curr_cell = self.pos2cell(*state['pose'][:2])
+        curr_cell = np.array(self.pos2cell(*state['pose'][:2]))
 
         cell_path = []
 
@@ -618,7 +618,7 @@ class SimpleNavEnv(gym.Env):
             if self.alt_goal:
                 des_cell += np.array([random.random()/2.5 - 0.2, random.random()/2.5 - 0.2])
 
-            if des_cell != curr_cell:
+            if not np.array_equal(des_cell ,curr_cell):
                 break
 
         cell_path.append(des_cell)

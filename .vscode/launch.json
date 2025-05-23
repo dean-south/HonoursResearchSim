@@ -17,7 +17,7 @@
                 // "--env", "straight_gui",
                 // "--env", "training_env_gui",
                 // "--env", "2014japan_gui",
-                "--env", "cl_move_gui",
+                "--env", "cl_const_gui",
                 "--test_mode", "true",
                 "--load_model", "c5siz6xi",
                 // "--load_model", "iuk4pakz_best1",

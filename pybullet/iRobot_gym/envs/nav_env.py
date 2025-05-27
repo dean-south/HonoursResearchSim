@@ -30,12 +30,14 @@ class SimpleNavEnv(gym.Env):
     def __init__(self, scenario, render_mode='rgb_array'):
         if scenario.agent.task_name == 'cl_const' or scenario.agent.task_name == 'cl_move':
             self.maze_id = 0
-            self.maze_size = 16
+            self.maze_size = 64
+            self.range = 16
             self.wall_prob = 0.0
             self.show_walls = True
             self.alt_goal = not scenario.agent.task_name == 'cl_const'
             self.maze = set_constrained_env(64, self.wall_prob, self.show_walls)
         else:
+            self.range = 16
             self.maze_size = 16
 
         super().__init__()
@@ -191,7 +193,7 @@ class SimpleNavEnv(gym.Env):
                 self.wall_prob = random.random()/2
 
                 p.removeBody(self.maze_id)
-                self.maze = set_constrained_env(64, self.wall_prob, self.show_walls)
+                self.maze = set_constrained_env(self.maze_size, self.wall_prob, self.show_walls)
                 self.maze_id = p.loadURDF("pybullet/models/scenes/cl/cl.urdf")
                 
             self._scenario.world.reset()
@@ -239,7 +241,7 @@ class SimpleNavEnv(gym.Env):
 
         target = cell + np.array([-(self.maze_size/2 - 0.5),-(self.maze_size/2 - 0.5)])
 
-        pos_ = np.linalg.norm([pos - target])/(self.maze_size*sqrt(2))
+        pos_ = np.linalg.norm([pos - target])/(self.range*sqrt(2))
 
         if (pos[0]-target[0] == 0):
             theta_ = pi/2 if target[1] > pos[1] else -pi/2
@@ -587,7 +589,7 @@ class SimpleNavEnv(gym.Env):
             d_x = int(sin(direction * pi/2))
             d_y = int(cos(direction * pi/2))
 
-            dist = random.randint(1,self.maze_size-1)
+            dist = random.randint(1,self.range-1)
 
             des_cell = [int(curr_cell[0] + d_x*dist), int(curr_cell[1] + d_y*dist)]
 
